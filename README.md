@@ -25,3 +25,25 @@ salonebiz-frontend/
         ├── auth-page.js
         ├── workspace.js
         └── app.js
+
+                    SALONEBIZ
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+      HOME          FRIENDS         CREATE
+        │              │              │
+      Posts        Discover       Image post
+        │              │              │
+   ❤️ Like         Follow        Business
+   💬 Comment                       │
+   ↗️ Share                         │
+   ⭐ Favorite                      │
+        │
+        ├──────────────┐
+        │              │
+      INBOX          PROFILE
+        │              │
+    Messages       User info
+    Activity       Posts
+                   Favorites
+                   Followers
