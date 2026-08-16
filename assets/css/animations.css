@@ -1,0 +1,43 @@
+@keyframes spin {
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
+
+@keyframes floatIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+.reveal {
+    animation:
+        floatIn 0.55s ease both;
+}
+
+
+.delay-1 {
+    animation-delay: 0.08s;
+}
+
+
+.delay-2 {
+    animation-delay: 0.16s;
+}
+
+
+.delay-3 {
+    animation-delay: 0.24s;
+}
