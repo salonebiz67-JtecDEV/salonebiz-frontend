@@ -1,81 +1,55 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
 
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
     >
 
-    <meta
-        name="theme-color"
-        content="#070910"
-    >
+    <title>SaloneBiz</title>
 
-    <title>SaloneBiz — Your Business. Your Workspace.</title>
-
-    <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-    >
-
-    <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin
-    >
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
-
-    <link rel="stylesheet" href="./assets/css/base.css">
-    <link rel="stylesheet" href="./assets/css/animations.css">
-    <link rel="stylesheet" href="./assets/css/auth.css">
-    <link rel="stylesheet" href="./assets/css/workspace.css">
+    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/auth.css">
+    <link rel="stylesheet" href="./css/app.css">
 </head>
 
 <body>
 
-    <!-- Initial application loader -->
-    <div
-        id="app-loader"
-        class="app-loader"
-    >
-        <div class="loader-orb"></div>
+    <!-- APP -->
+    <div id="app"></div>
 
-        <p>SaloneBiz</p>
-    </div>
+    <!-- MAIN NAVIGATION -->
+    <nav id="bottomNav" class="bottom-nav hidden">
 
+        <button data-page="home" class="nav-item active">
+            <span>⌂</span>
+            <small>Home</small>
+        </button>
 
-    <!-- Background effects -->
-    <div class="background-glow glow-a"></div>
-    <div class="background-glow glow-b"></div>
+        <button data-page="friends" class="nav-item">
+            <span>👥</span>
+            <small>Friends</small>
+        </button>
 
+        <button data-page="create" class="create-button">
+            +
+        </button>
 
-    <!-- Application -->
-    <main
-        id="app"
-        class="app-shell"
-    ></main>
+        <button data-page="inbox" class="nav-item">
+            <span>💬</span>
+            <small>Inbox</small>
+        </button>
 
+        <button data-page="profile" class="nav-item">
+            <span>👤</span>
+            <small>Profile</small>
+        </button>
 
-    <!-- Toast notifications -->
-    <div
-        id="toast"
-        class="toast"
-        role="status"
-        aria-live="polite"
-    ></div>
+    </nav>
 
-
-    <!-- App -->
-    <script
-        type="module"
-        src="./assets/js/app.js"
-    ></script>
+    <script type="module" src="./js/app.js"></script>
 
 </body>
 </html>
