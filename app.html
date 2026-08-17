@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>SaloneBiz</title>
+
+    <link
+        rel="stylesheet"
+        href="css/app.css"
+    >
+
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- ============================= -->
+    <!-- TOP BAR -->
+    <!-- ============================= -->
+
+    <header class="topbar">
+
+        <div class="brand">
+            🇸🇱
+            <span>SaloneBiz</span>
+        </div>
+
+        <button
+            class="icon-button"
+            id="searchButton"
+            aria-label="Search"
+        >
+            🔍
+        </button>
+
+        <button
+            class="icon-button"
+            id="notificationButton"
+            aria-label="Notifications"
+        >
+            🔔
+        </button>
+
+    </header>
+
+
+    <!-- ============================= -->
+    <!-- PAGE CONTENT -->
+    <!-- ============================= -->
+
+    <main id="pageContent"></main>
+
+
+    <!-- ============================= -->
+    <!-- BOTTOM NAVIGATION -->
+    <!-- ============================= -->
+
+    <nav class="bottom-nav">
+
+        <button
+            class="nav-item active"
+            data-page="home"
+        >
+            <span>⌂</span>
+            <small>Home</small>
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="friends"
+        >
+            <span>👥</span>
+            <small>Friends</small>
+        </button>
+
+
+        <button
+            class="create-button"
+            data-page="create"
+            aria-label="Create post"
+        >
+            +
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="inbox"
+        >
+            <span>💬</span>
+            <small>Inbox</small>
+        </button>
+
+
+        <button
+            class="nav-item"
+            data-page="profile"
+        >
+            <span>👤</span>
+            <small>Profile</small>
+        </button>
+
+    </nav>
+
+</div>
+
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
+<script src="js/pages/home.js"></script>
+<script src="js/pages/friends.js"></script>
+<script src="js/pages/create.js"></script>
+<script src="js/pages/inbox.js"></script>
+<script src="js/pages/profile.js"></script>
+<script src="js/pages/search.js"></script>
+<script src="js/pages/settings.js"></script>
+
+<script src="js/app.js"></script>
+
+</body>
+  </html>
