@@ -1,5 +1,5 @@
 const API_BASE =
-    "https://johnny-ai-video-backend.onrender.com";
+    "https://salonebiz-backend.onrender.com";
 
 async function apiRequest(endpoint, options = {}) {
 
