@@ -1,19 +1,17 @@
-window.SaloneBizPages =
-    window.SaloneBizPages || {};
+import { apiGet } from "../api.js";
 
-window.SaloneBizPages.search = {
+export async function renderSearch(app) {
 
-    render() {
+    app.innerHTML = `
+        <div class="page">
 
-        return `
+            <header class="app-header">
+                <div class="header-inner">
+                    <div class="brand">🔍 Search</div>
+                </div>
+            </header>
 
-            <section class="page">
-
-                <span class="eyebrow">
-                    DISCOVER
-                </span>
-
-                <h1>Search</h1>
+            <main class="container">
 
                 <div class="search-box">
 
@@ -22,71 +20,103 @@ window.SaloneBizPages.search = {
                     <input
                         id="searchInput"
                         type="search"
-                        placeholder="Businesses, people, products..."
+                        placeholder="Businesses, people..."
                     >
 
                 </div>
 
+                <div id="searchResults" class="empty-state small">
 
-                <div
-                    id="searchResults"
-                    class="empty-state small"
-                >
+                    <div>🔎</div>
 
-                    <div>
-                        🔎
-                    </div>
-
-                    <p>
-                        Start searching SaloneBiz.
-                    </p>
+                    <p>Start searching SaloneBiz.</p>
 
                 </div>
 
-            </section>
+            </main>
 
-        `;
-    },
+        </div>
+    `;
 
-    init() {
+    const input = document.getElementById("searchInput");
+    const results = document.getElementById("searchResults");
 
-        const input =
-            document.getElementById("searchInput");
+    input.focus();
 
-        input.focus();
+    input.addEventListener("input", async () => {
 
-        input.addEventListener(
-            "input",
-            () => {
+        const query = input.value.trim();
 
-                const value =
-                    input.value.trim();
+        if (!query) {
 
-                if (!value) {
+            results.innerHTML = `
+                <div>🔎</div>
+                <p>Start searching SaloneBiz.</p>
+            `;
 
-                    document.getElementById(
-                        "searchResults"
-                    ).innerHTML = `
-                        <div>🔎</div>
-                        <p>
-                            Start searching SaloneBiz.
-                        </p>
-                    `;
+            return;
+        }
 
-                    return;
-                }
+        results.innerHTML = `<div class="loader"></div>`;
 
-                document.getElementById(
-                    "searchResults"
-                ).innerHTML = `
-                    <div>🔍</div>
-                    <p>
-                        Search API will be connected next.
-                    </p>
+        try {
+
+            const data = await apiGet(
+                `/api/users?q=${encodeURIComponent(query)}`
+            );
+
+            const users = data.users || [];
+
+            if (!users.length) {
+
+                results.innerHTML = `
+                    <div>😕</div>
+                    <p>No results found.</p>
                 `;
 
+                return;
             }
-        );
 
-    }
-};
+            results.innerHTML = users.map(user => `
+                <div class="business-card">
+
+                    <div class="business-card-top">
+
+                        <div class="business-card-avatar">
+                            👤
+                        </div>
+
+                        <div>
+                            <strong>${escape(user.name)}</strong>
+                            <p class="text-muted">${escape(user.role || "Business")}</p>
+                        </div>
+
+                    </div>
+
+                </div>
+            `).join("");
+
+        } catch {
+
+            results.innerHTML = `
+                <div>⚠️</div>
+                <p>Search unavailable.</p>
+            `;
+
+        }
+
+    });
+
+}
+
+function escape(text) {
+
+    return String(text ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+    })[c]);
+
+}
