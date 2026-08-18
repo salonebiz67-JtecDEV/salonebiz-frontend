@@ -11,6 +11,10 @@ import {
     getInteractionStatus
 } from "../api.js";
 
+import {
+    navigate
+} from "../router.js";
+
 
 // =====================================================
 // HOME PAGE
@@ -49,6 +53,7 @@ export async function renderHome(app) {
 
             </header>
 
+
             <main class="container">
 
                 <h1 class="page-title">
@@ -59,6 +64,7 @@ export async function renderHome(app) {
                     Discover businesses around Sierra Leone.
                 </p>
 
+
                 <div id="feed">
 
                     <div
@@ -68,7 +74,9 @@ export async function renderHome(app) {
                             padding:40px;
                         "
                     >
+
                         <div class="loader"></div>
+
                     </div>
 
                 </div>
@@ -78,33 +86,109 @@ export async function renderHome(app) {
         </div>
     `;
 
-    const feed = document.getElementById("feed");
+
+    const feed =
+        document.getElementById("feed");
+
 
     if (!feed) {
-        console.error("❌ Home: #feed not found.");
+
+        console.error(
+            "❌ Home: #feed not found."
+        );
+
         return;
     }
 
+
+    // Search works directly through router
     setupSearch();
+
 
     try {
 
-        const result = await getFeed(1, 20);
+        console.log(
+            "🇸🇱 Loading SaloneBiz feed..."
+        );
 
-        console.log("🇸🇱 Feed response:", result);
 
-        const posts =
-            Array.isArray(result?.posts)
-                ? result.posts
-                : Array.isArray(result?.data)
-                    ? result.data
-                    : Array.isArray(result?.feed)
-                        ? result.feed
-                        : Array.isArray(result)
-                            ? result
-                            : [];
+        const result =
+            await getFeed(1, 20);
 
-        if (posts.length === 0) {
+
+        console.log(
+            "🇸🇱 Feed response:",
+            result
+        );
+
+
+        // =================================================
+        // NORMALIZE POSTS RESPONSE
+        // =================================================
+
+        let posts = [];
+
+
+        if (
+            Array.isArray(
+                result?.posts
+            )
+        ) {
+
+            posts =
+                result.posts;
+
+        } else if (
+            Array.isArray(
+                result?.data?.posts
+            )
+        ) {
+
+            posts =
+                result.data.posts;
+
+        } else if (
+            Array.isArray(
+                result?.data
+            )
+        ) {
+
+            posts =
+                result.data;
+
+        } else if (
+            Array.isArray(
+                result?.feed
+            )
+        ) {
+
+            posts =
+                result.feed;
+
+        } else if (
+            Array.isArray(
+                result
+            )
+        ) {
+
+            posts =
+                result;
+        }
+
+
+        console.log(
+            "🇸🇱 Posts found:",
+            posts.length
+        );
+
+
+        // =================================================
+        // NO POSTS
+        // =================================================
+
+        if (
+            posts.length === 0
+        ) {
 
             feed.innerHTML = `
 
@@ -116,33 +200,86 @@ export async function renderHome(app) {
                     "
                 >
 
-                    <div style="font-size:45px;">
+                    <div
+                        style="
+                            font-size:45px;
+                        "
+                    >
                         🏪
                     </div>
+
 
                     <h2>
                         No posts yet
                     </h2>
+
 
                     <p class="text-muted">
                         Be the first business to
                         share something on SaloneBiz.
                     </p>
 
-                </div>
 
+                    <button
+                        class="primary-button"
+                        id="createFirstPost"
+                        type="button"
+                        style="
+                            margin-top:15px;
+                        "
+                    >
+                        Create First Post
+                    </button>
+
+                </div>
             `;
+
+
+            document
+                .getElementById(
+                    "createFirstPost"
+                )
+                ?.addEventListener(
+                    "click",
+                    () => navigate("create")
+                );
+
 
             return;
         }
 
-        feed.innerHTML = posts
-            .map(post => createPost(post))
-            .join("");
 
-        await loadInteractionStates(posts);
+        // =================================================
+        // RENDER POSTS SAFELY
+        // =================================================
+
+        feed.innerHTML =
+            posts
+                .filter(Boolean)
+                .map(
+                    post =>
+                        createPost(
+                            post || {}
+                        )
+                )
+                .join("");
+
+
+        // =================================================
+        // LOAD LIKE/FAVORITE STATES
+        // =================================================
+
+        await loadInteractionStates(
+            posts
+        );
+
+
+        // =================================================
+        // BUTTON EVENTS
+        // =================================================
 
         attachPostEvents();
+
 
     } catch (error) {
 
@@ -150,6 +287,7 @@ export async function renderHome(app) {
             "❌ Failed to load SaloneBiz feed:",
             error
         );
+
 
         feed.innerHTML = `
 
@@ -161,13 +299,19 @@ export async function renderHome(app) {
                 "
             >
 
-                <div style="font-size:45px;">
+                <div
+                    style="
+                        font-size:45px;
+                    "
+                >
                     ⚠️
                 </div>
+
 
                 <h2>
                     Unable to load posts
                 </h2>
+
 
                 <p class="text-muted">
                     ${escapeHtml(
@@ -176,19 +320,23 @@ export async function renderHome(app) {
                     )}
                 </p>
 
+
                 <button
                     class="primary-button"
                     id="retryFeed"
                     type="button"
                 >
-                    Try again
+                    Try Again
                 </button>
 
             </div>
         `;
 
+
         document
-            .getElementById("retryFeed")
+            .getElementById(
+                "retryFeed"
+            )
             ?.addEventListener(
                 "click",
                 () => renderHome(app)
@@ -198,57 +346,68 @@ export async function renderHome(app) {
 
 
 // =====================================================
-// CREATE POST
+// CREATE POST CARD
 // =====================================================
 
-function createPost(post = {}) {
+function createPost(
+    post = {}
+) {
 
     const postId =
-        post.id ||
-        post.post_id ||
+        post?.id ||
+        post?.post_id ||
         "";
+
 
     const userName =
-        post.user_name ||
-        post.name ||
-        post.business_name ||
+        post?.user_name ||
+        post?.name ||
+        post?.business_name ||
         "SaloneBiz User";
 
+
     const userEmail =
-        post.user_email ||
-        post.email ||
+        post?.user_email ||
+        post?.email ||
         "Sierra Leone";
 
+
     const caption =
-        post.caption ||
-        post.description ||
+        post?.caption ||
+        post?.description ||
         "";
 
+
     const image =
-        post.image_url ||
-        post.imageUrl ||
-        post.image ||
+        post?.image_url ||
+        post?.imageUrl ||
+        post?.image ||
         "";
+
 
     const initialLikes =
         Number(
-            post.likes ??
-            post.like_count ??
+            post?.likes ??
+            post?.like_count ??
             0
         );
 
+
     const initialComments =
         Number(
-            post.comments ??
-            post.comment_count ??
+            post?.comments ??
+            post?.comment_count ??
             0
         );
+
 
     return `
 
         <article
             class="post"
-            data-post-id="${escapeHtml(postId)}"
+            data-post-id="${escapeHtml(
+                postId
+            )}"
         >
 
             <div class="post-header">
@@ -257,17 +416,24 @@ function createPost(post = {}) {
                     👤
                 </div>
 
+
                 <div class="business-info">
 
                     <div class="business-name">
-                        ${escapeHtml(userName)}
+                        ${escapeHtml(
+                            userName
+                        )}
                     </div>
 
+
                     <div class="business-location">
-                        ${escapeHtml(userEmail)}
+                        ${escapeHtml(
+                            userEmail
+                        )}
                     </div>
 
                 </div>
+
 
                 <button
                     class="header-action"
@@ -279,22 +445,28 @@ function createPost(post = {}) {
 
             </div>
 
+
             ${
                 image
                     ? `
                         <img
                             class="post-image"
-                            src="${escapeHtml(image)}"
+                            src="${escapeHtml(
+                                image
+                            )}"
                             alt="${escapeHtml(
                                 caption ||
                                 "SaloneBiz post"
                             )}"
                             loading="lazy"
-                            onerror="this.style.display='none'"
+                            onerror="
+                                this.style.display='none'
+                            "
                         >
                     `
                     : ""
             }
+
 
             <div class="post-content">
 
@@ -302,11 +474,14 @@ function createPost(post = {}) {
                     caption
                         ? `
                             <div class="post-description">
-                                ${escapeHtml(caption)}
+                                ${escapeHtml(
+                                    caption
+                                )}
                             </div>
                         `
                         : ""
                 }
+
 
                 <div class="post-actions">
 
@@ -327,6 +502,7 @@ function createPost(post = {}) {
                         </span>
                     </button>
 
+
                     <button
                         class="post-action comment-button"
                         type="button"
@@ -343,12 +519,14 @@ function createPost(post = {}) {
                         </span>
                     </button>
 
+
                     <button
                         class="post-action share-button"
                         type="button"
                     >
                         ↗️
                     </button>
+
 
                     <button
                         class="post-action favorite-button"
@@ -368,121 +546,185 @@ function createPost(post = {}) {
 
 
 // =====================================================
-// LOAD INTERACTION STATES
+// INTERACTION STATES
 // =====================================================
 
-async function loadInteractionStates(posts) {
+async function loadInteractionStates(
+    posts
+) {
+
+    if (!Array.isArray(posts)) {
+        return;
+    }
+
 
     await Promise.all(
-        posts.map(async post => {
 
-            const postId =
-                post?.id ||
-                post?.post_id;
+        posts.map(
+            async post => {
 
-            if (!postId) {
-                return;
-            }
+                const postId =
+                    post?.id ||
+                    post?.post_id;
 
-            try {
 
-                const result =
-                    await getInteractionStatus(
-                        postId
-                    );
-
-                const article =
-                    document.querySelector(
-                        `.post[data-post-id="${CSS.escape(
-                            String(postId)
-                        )}"]`
-                    );
-
-                if (!article) {
+                if (!postId) {
                     return;
                 }
 
-                const likeButton =
-                    article.querySelector(
-                        ".like-button"
+
+                try {
+
+                    const result =
+                        await getInteractionStatus(
+                            postId
+                        );
+
+
+                    const article =
+                        findPostElement(
+                            postId
+                        );
+
+
+                    if (!article) {
+                        return;
+                    }
+
+
+                    const likeButton =
+                        article.querySelector(
+                            ".like-button"
+                        );
+
+
+                    const favoriteButton =
+                        article.querySelector(
+                            ".favorite-button"
+                        );
+
+
+                    const likeCount =
+                        article.querySelector(
+                            ".like-count"
+                        );
+
+
+                    if (
+                        !likeButton ||
+                        !favoriteButton
+                    ) {
+                        return;
+                    }
+
+
+                    const liked =
+                        Boolean(
+                            result?.liked ??
+                            result?.isLiked ??
+                            result?.like ??
+                            false
+                        );
+
+
+                    const favorited =
+                        Boolean(
+                            result?.favorited ??
+                            result?.isFavorited ??
+                            result?.favorite ??
+                            false
+                        );
+
+
+                    const count =
+                        Number(
+                            result?.likes ??
+                            result?.likeCount ??
+                            result?.like_count ??
+                            post?.likes ??
+                            post?.like_count ??
+                            0
+                        );
+
+
+                    likeButton.dataset.liked =
+                        String(liked);
+
+
+                    favoriteButton.dataset.favorited =
+                        String(favorited);
+
+
+                    likeButton.classList.toggle(
+                        "liked",
+                        liked
                     );
 
-                const favoriteButton =
-                    article.querySelector(
-                        ".favorite-button"
+
+                    favoriteButton.classList.toggle(
+                        "favorited",
+                        favorited
                     );
 
-                const likeCount =
-                    article.querySelector(
-                        ".like-count"
+
+                    if (likeCount) {
+
+                        likeCount.textContent =
+                            Number.isFinite(
+                                count
+                            )
+                                ? count
+                                : 0;
+                    }
+
+
+                } catch (error) {
+
+                    // Interaction failure must NEVER
+                    // destroy the home page.
+
+                    console.warn(
+                        `⚠️ Interaction state unavailable for ${postId}:`,
+                        error
                     );
 
-                if (!likeButton || !favoriteButton) {
-                    return;
                 }
-
-                const liked =
-                    Boolean(
-                        result?.liked ??
-                        result?.isLiked ??
-                        result?.like ??
-                        false
-                    );
-
-                const favorited =
-                    Boolean(
-                        result?.favorited ??
-                        result?.isFavorited ??
-                        result?.favorite ??
-                        false
-                    );
-
-                const count =
-                    Number(
-                        result?.likes ??
-                        result?.likeCount ??
-                        result?.like_count ??
-                        post?.likes ??
-                        post?.like_count ??
-                        0
-                    );
-
-                likeButton.dataset.liked =
-                    String(liked);
-
-                favoriteButton.dataset.favorited =
-                    String(favorited);
-
-                likeButton.classList.toggle(
-                    "liked",
-                    liked
-                );
-
-                favoriteButton.classList.toggle(
-                    "favorited",
-                    favorited
-                );
-
-                if (likeCount) {
-
-                    likeCount.textContent =
-                        Number.isFinite(count)
-                            ? count
-                            : 0;
-
-                }
-
-            } catch (error) {
-
-                console.warn(
-                    `⚠️ Interaction state unavailable for post ${postId}:`,
-                    error
-                );
 
             }
-
-        })
+        )
     );
+}
+
+
+// =====================================================
+// FIND POST ELEMENT
+// =====================================================
+
+function findPostElement(
+    postId
+) {
+
+    const posts =
+        document.querySelectorAll(
+            ".post[data-post-id]"
+        );
+
+
+    for (
+        const article of posts
+    ) {
+
+        if (
+            article.dataset.postId ===
+            String(postId)
+        ) {
+
+            return article;
+        }
+    }
+
+
+    return null;
 }
 
 
@@ -492,293 +734,347 @@ async function loadInteractionStates(posts) {
 
 function attachPostEvents() {
 
-    // -------------------------------------------------
+
+    // =================================================
     // LIKE
-    // -------------------------------------------------
+    // =================================================
 
     document
-        .querySelectorAll(".like-button")
-        .forEach(button => {
+        .querySelectorAll(
+            ".like-button"
+        )
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                async () => {
+                button.addEventListener(
+                    "click",
+                    async () => {
 
-                    const article =
-                        button.closest(".post");
-
-                    const postId =
-                        article?.dataset.postId;
-
-                    if (!postId) {
-                        return;
-                    }
-
-                    const liked =
-                        button.dataset.liked ===
-                        "true";
-
-                    const count =
-                        article.querySelector(
-                            ".like-count"
-                        );
-
-                    const oldCount =
-                        Number(
-                            count?.textContent
-                        ) || 0;
-
-                    button.disabled = true;
-
-                    try {
-
-                        if (liked) {
-
-                            await unlikePost(
-                                postId
+                        const article =
+                            button.closest(
+                                ".post"
                             );
 
-                        } else {
 
-                            await likePost(
-                                postId
-                            );
+                        const postId =
+                            article?.dataset?.postId;
 
+
+                        if (!postId) {
+                            return;
                         }
 
-                        const newLiked =
-                            !liked;
 
-                        button.dataset.liked =
-                            String(newLiked);
+                        const liked =
+                            button.dataset.liked ===
+                            "true";
 
-                        button.classList.toggle(
-                            "liked",
-                            newLiked
-                        );
 
-                        if (count) {
+                        const count =
+                            article.querySelector(
+                                ".like-count"
+                            );
 
-                            count.textContent =
-                                Math.max(
-                                    0,
-                                    oldCount +
-                                    (
-                                        newLiked
-                                            ? 1
-                                            : -1
-                                    )
+
+                        const oldCount =
+                            Number(
+                                count?.textContent
+                            ) || 0;
+
+
+                        button.disabled =
+                            true;
+
+
+                        try {
+
+                            if (liked) {
+
+                                await unlikePost(
+                                    postId
                                 );
 
-                        }
+                            } else {
 
-                    } catch (error) {
-
-                        console.error(
-                            "❌ Like error:",
-                            error
-                        );
-
-                        alert(
-                            error?.message ||
-                            "Unable to update like."
-                        );
-
-                    } finally {
-
-                        button.disabled = false;
-
-                    }
-                }
-            );
-        });
+                                await likePost(
+                                    postId
+                                );
+                            }
 
 
-    // -------------------------------------------------
-    // FAVORITE
-    // -------------------------------------------------
+                            const newLiked =
+                                !liked;
 
-    document
-        .querySelectorAll(".favorite-button")
-        .forEach(button => {
 
-            button.addEventListener(
-                "click",
-                async () => {
+                            button.dataset.liked =
+                                String(
+                                    newLiked
+                                );
 
-                    const article =
-                        button.closest(".post");
 
-                    const postId =
-                        article?.dataset.postId;
-
-                    if (!postId) {
-                        return;
-                    }
-
-                    const favorited =
-                        button.dataset.favorited ===
-                        "true";
-
-                    button.disabled = true;
-
-                    try {
-
-                        if (favorited) {
-
-                            await unfavoritePost(
-                                postId
+                            button.classList.toggle(
+                                "liked",
+                                newLiked
                             );
 
-                        } else {
 
-                            await favoritePost(
-                                postId
-                            );
+                            if (count) {
 
-                        }
-
-                        const newState =
-                            !favorited;
-
-                        button.dataset.favorited =
-                            String(newState);
-
-                        button.classList.toggle(
-                            "favorited",
-                            newState
-                        );
-
-                    } catch (error) {
-
-                        console.error(
-                            "❌ Favorite error:",
-                            error
-                        );
-
-                        alert(
-                            error?.message ||
-                            "Unable to update favorite."
-                        );
-
-                    } finally {
-
-                        button.disabled = false;
-
-                    }
-                }
-            );
-        });
+                                count.textContent =
+                                    Math.max(
+                                        0,
+                                        oldCount +
+                                        (
+                                            newLiked
+                                                ? 1
+                                                : -1
+                                        )
+                                    );
+                            }
 
 
-    // -------------------------------------------------
-    // SHARE
-    // -------------------------------------------------
-
-    document
-        .querySelectorAll(".share-button")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                async () => {
-
-                    const article =
-                        button.closest(".post");
-
-                    const business =
-                        article
-                            ?.querySelector(
-                                ".business-name"
-                            )
-                            ?.textContent
-                            ?.trim() ||
-                        "SaloneBiz";
-
-                    const shareData = {
-
-                        title: business,
-
-                        text:
-                            `Check out ${business} on SaloneBiz`,
-
-                        url:
-                            window.location.href
-
-                    };
-
-                    try {
-
-                        if (navigator.share) {
-
-                            await navigator.share(
-                                shareData
-                            );
-
-                        } else if (
-                            navigator.clipboard
-                        ) {
-
-                            await navigator.clipboard.writeText(
-                                window.location.href
-                            );
-
-                            alert(
-                                "SaloneBiz link copied!"
-                            );
-
-                        } else {
-
-                            alert(
-                                "Sharing is not supported on this device."
-                            );
-
-                        }
-
-                    } catch (error) {
-
-                        if (
-                            error?.name !==
-                            "AbortError"
-                        ) {
+                        } catch (error) {
 
                             console.error(
-                                "❌ Share error:",
+                                "❌ Like error:",
                                 error
                             );
 
+
+                            alert(
+                                error?.message ||
+                                "Unable to update like."
+                            );
+
+
+                        } finally {
+
+                            button.disabled =
+                                false;
                         }
-
                     }
-                }
-            );
-        });
+                );
+            }
+        );
 
 
-    // -------------------------------------------------
-    // COMMENTS
-    // -------------------------------------------------
+        // =================================================
+    // FAVORITE
+    // =================================================
 
     document
-        .querySelectorAll(".comment-button")
-        .forEach(button => {
+        .querySelectorAll(
+            ".favorite-button"
+        )
+        .forEach(
+            button => {
 
-            button.addEventListener(
-                "click",
-                () => {
+                button.addEventListener(
+                    "click",
+                    async () => {
 
-                    alert(
-                        "Comments page will be connected next."
-                    );
+                        const article =
+                            button.closest(
+                                ".post"
+                            );
 
-                }
-            );
-        });
+
+                        const postId =
+                            article?.dataset?.postId;
+
+
+                        if (!postId) {
+                            return;
+                        }
+
+
+                        const favorited =
+                            button.dataset.favorited ===
+                            "true";
+
+
+                        button.disabled =
+                            true;
+
+
+                        try {
+
+                            if (favorited) {
+
+                                await unfavoritePost(
+                                    postId
+                                );
+
+                            } else {
+
+                                await favoritePost(
+                                    postId
+                                );
+                            }
+
+
+                            const newState =
+                                !favorited;
+
+
+                            button.dataset.favorited =
+                                String(
+                                    newState
+                                );
+
+
+                            button.classList.toggle(
+                                "favorited",
+                                newState
+                            );
+
+
+                        } catch (error) {
+
+                            console.error(
+                                "❌ Favorite error:",
+                                error
+                            );
+
+
+                            alert(
+                                error?.message ||
+                                "Unable to update favorite."
+                            );
+
+
+                        } finally {
+
+                            button.disabled =
+                                false;
+                        }
+                    }
+                );
+            }
+        );
+
+
+    // =================================================
+    // SHARE
+    // =================================================
+
+    document
+        .querySelectorAll(
+            ".share-button"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    async () => {
+
+                        const article =
+                            button.closest(
+                                ".post"
+                            );
+
+
+                        const business =
+                            article
+                                ?.querySelector(
+                                    ".business-name"
+                                )
+                                ?.textContent
+                                ?.trim() ||
+                            "SaloneBiz";
+
+
+                        const shareData = {
+
+                            title:
+                                business,
+
+                            text:
+                                `Check out ${business} on SaloneBiz`,
+
+                            url:
+                                window.location.href
+                        };
+
+
+                        try {
+
+                            if (
+                                navigator.share
+                            ) {
+
+                                await navigator.share(
+                                    shareData
+                                );
+
+                            } else if (
+                                navigator.clipboard
+                            ) {
+
+                                await navigator.clipboard.writeText(
+                                    window.location.href
+                                );
+
+
+                                alert(
+                                    "SaloneBiz link copied!"
+                                );
+
+                            } else {
+
+                                alert(
+                                    "Sharing is not supported on this device."
+                                );
+                            }
+
+
+                        } catch (error) {
+
+                            if (
+                                error?.name !==
+                                "AbortError"
+                            ) {
+
+                                console.error(
+                                    "❌ Share error:",
+                                    error
+                                );
+                            }
+                        }
+                    }
+                );
+            }
+        );
+
+
+    // =================================================
+    // COMMENTS
+    // =================================================
+
+    document
+        .querySelectorAll(
+            ".comment-button"
+        )
+        .forEach(
+            button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        alert(
+                            "Comments page will be connected next."
+                        );
+                    }
+                );
+            }
+        );
 }
 
 
 // =====================================================
-// SEARCH BUTTON
+// SEARCH
 // =====================================================
 
 function setupSearch() {
@@ -788,38 +1084,49 @@ function setupSearch() {
             "searchButton"
         );
 
+
     if (!button) {
         return;
     }
 
+
     button.onclick = () => {
 
-        if (
-            typeof window.navigate ===
-            "function"
-        ) {
+        navigate("search");
 
-            window.navigate("search");
-
-            return;
-        }
-
-        window.location.hash =
-            "#search";
     };
 }
 
 
 // =====================================================
-// HTML ESCAPE
+// ESCAPE HTML
 // =====================================================
 
-function escapeHtml(value) {
+function escapeHtml(
+    value
+) {
 
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 }
