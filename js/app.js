@@ -1,305 +1,64 @@
-// =====================================================
-// 🇸🇱 SALONEBIZ MAIN APPLICATION
-// js/app.js
-// =====================================================
+document.addEventListener("DOMContentLoaded", () => {
 
-import {
-    initializeAuth,
-    logout
-} from "./auth.js";
-
-import {
-    loadUser,
-    getUser
-} from "./state.js";
-
-import {
-    checkAPI
-} from "./api.js";
-
-
-// =====================================================
-// APP STARTUP
-// =====================================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    initializeApp
-);
-
-
-// =====================================================
-// INITIALIZE APPLICATION
-// =====================================================
-
-async function initializeApp() {
-
-    console.log(
-        "🇸🇱 Starting SaloneBiz..."
-    );
-
-
-    // -------------------------------------------------
-    // REQUIRED ELEMENTS
-    // -------------------------------------------------
-
-    const app =
-        document.getElementById(
-            "app"
-        );
-
-
-    const bottomNav =
-        document.getElementById(
-            "bottomNav"
-        );
-
+    const app = document.getElementById("app");
 
     if (!app) {
-
-        console.error(
-            "❌ SaloneBiz: #app element not found."
-        );
-
+        document.body.innerHTML = "<h1>#app not found</h1>";
         return;
     }
 
-
-    // -------------------------------------------------
-    // INITIAL NAVIGATION STATE
-    // -------------------------------------------------
-
-    if (bottomNav) {
-
-        bottomNav.classList.add(
-            "hidden"
-        );
-
-    }
-
-
-    // -------------------------------------------------
-    // LOAD SAVED USER
-    // -------------------------------------------------
-
-    const user =
-        loadUser();
-
-
-    if (user) {
-
-        console.log(
-            "👤 Saved user found:",
-            user.name || user.email
-        );
-
-    } else {
-
-        console.log(
-            "👤 No saved user."
-        );
-
-    }
-
-
-    // -------------------------------------------------
-    // CHECK API
-    // -------------------------------------------------
-
-    try {
-
-        const health =
-            await checkAPI();
-
-
-        if (
-            health &&
-            (
-                health.success ||
-                health.status === "healthy"
-            )
-        ) {
-
-            console.log(
-                "🟢 SaloneBiz API online."
-            );
-
-        } else {
-
-            console.warn(
-                "🟡 SaloneBiz API is unavailable."
-            );
-
-        }
-
-    } catch (error) {
-
-        console.warn(
-            "🟡 API health check failed:",
-            error
-        );
-
-    }
-
-
-    // -------------------------------------------------
-    // INITIALIZE AUTH
-    // -------------------------------------------------
-
-    try {
-
-        initializeAuth();
-
-    } catch (error) {
-
-        console.error(
-            "❌ Authentication initialization failed:",
-            error
-        );
-
-
-        showStartupError(
-            app,
-            error
-        );
-
-    }
-
-
-    // -------------------------------------------------
-    // LOGOUT EVENT
-    // -------------------------------------------------
-
-    window.addEventListener(
-        "salonebiz:logout",
-        () => {
-
-            logout();
-
-        }
-    );
-
-
-    console.log(
-        "✅ SaloneBiz startup complete."
-    );
-
-}
-
-
-// =====================================================
-// STARTUP ERROR SCREEN
-// =====================================================
-
-function showStartupError(
-    app,
-    error
-) {
-
-    const message =
-        error?.message ||
-        "Unknown application error.";
-
-
     app.innerHTML = `
+        <div style="
+            min-height:100vh;
+            background:#050816;
+            color:white;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            text-align:center;
+            padding:30px;
+            font-family:Arial,sans-serif;
+        ">
 
-        <div
-            class="page"
-            style="
-                min-height:100vh;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                padding:24px;
-            "
-        >
+            <div>
 
-            <div
-                class="create-box"
-                style="
-                    width:100%;
-                    max-width:500px;
-                    text-align:center;
-                "
-            >
-
-                <div
-                    style="
-                        font-size:50px;
-                        margin-bottom:15px;
-                    "
-                >
+                <div style="
+                    font-size:60px;
+                    margin-bottom:20px;
+                ">
                     🇸🇱
                 </div>
-
 
                 <h1>
                     SaloneBiz
                 </h1>
 
-
-                <h2>
-                    App couldn't start
-                </h2>
-
-
-                <p class="text-muted">
-                    ${escapeHtml(message)}
+                <p style="
+                    opacity:.7;
+                    margin-bottom:25px;
+                ">
+                    Frontend is loading correctly.
                 </p>
 
-
                 <button
-                    class="primary-button"
-                    type="button"
-                    id="reloadApp"
+                    onclick="location.reload()"
+                    style="
+                        border:0;
+                        padding:14px 25px;
+                        border-radius:14px;
+                        background:#fff;
+                        color:#000;
+                        font-weight:bold;
+                    "
                 >
-                    Reload App
+                    Reload
                 </button>
 
             </div>
 
         </div>
-
     `;
 
+    console.log("🇸🇱 SaloneBiz basic loader works.");
 
-    document
-        .getElementById(
-            "reloadApp"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                window.location.reload();
-
-            }
-        );
-
-}
-
-
-// =====================================================
-// HTML ESCAPE
-// =====================================================
-
-function escapeHtml(
-    value
-) {
-
-    return String(
-        value ?? ""
-    ).replace(
-        /[&<>"']/g,
-        character => ({
-
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;"
-
-        })[character]
-    );
-
-}
+});
