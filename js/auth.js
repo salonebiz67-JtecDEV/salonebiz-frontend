@@ -1,7 +1,3 @@
-// =====================================================
-// 🇸🇱 SALONEBIZ AUTHENTICATION
-// =====================================================
-
 import {
     login as apiLogin,
     logout as apiLogout
@@ -19,20 +15,42 @@ import {
 
 
 // =====================================================
+// 🇸🇱 SALONEBIZ AUTHENTICATION
+// =====================================================
+
+
+// =====================================================
 // INITIALIZE AUTH
 // =====================================================
 
 export function initializeAuth() {
 
-    const user =
-        loadUser();
+    console.log("🔐 Initializing authentication...");
 
+    try {
 
-    if (user) {
+        const user = loadUser();
 
-        showApp();
+        if (user) {
 
-    } else {
+            console.log("✅ Existing session found.");
+
+            showApp();
+
+        } else {
+
+            console.log("ℹ️ No session found.");
+
+            showLogin();
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "❌ Authentication initialization error:",
+            error
+        );
 
         showLogin();
 
@@ -54,10 +72,11 @@ function showLogin() {
     if (!app) {
 
         console.error(
-            "❌ #app element not found"
+            "❌ #app element not found."
         );
 
         return;
+
     }
 
 
@@ -67,9 +86,7 @@ function showLogin() {
 
     if (bottomNav) {
 
-        bottomNav.classList.add(
-            "hidden"
-        );
+        bottomNav.classList.add("hidden");
 
     }
 
@@ -80,30 +97,27 @@ function showLogin() {
 
             <main class="container">
 
-                <div
-                    style="
-                        min-height:100vh;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                    "
-                >
+                <div style="
+                    min-height:100vh;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                ">
 
                     <div
                         class="create-box"
                         style="width:100%;"
                     >
 
-                        <div
-                            style="
-                                text-align:center;
-                                margin-bottom:30px;
-                            "
-                        >
+                        <div style="
+                            text-align:center;
+                            margin-bottom:30px;
+                        ">
 
-                            <div
-                                style="font-size:50px;"
-                            >
+                            <div style="
+                                font-size:50px;
+                                margin-bottom:10px;
+                            ">
                                 🇸🇱
                             </div>
 
@@ -152,6 +166,7 @@ function showLogin() {
                                 color:#ff5577;
                                 margin-top:15px;
                                 text-align:center;
+                                min-height:20px;
                             "
                         ></p>
 
@@ -167,9 +182,7 @@ function showLogin() {
 
 
     const loginButton =
-        document.getElementById(
-            "loginButton"
-        );
+        document.getElementById("loginButton");
 
 
     if (loginButton) {
@@ -191,27 +204,19 @@ function showLogin() {
 async function performLogin() {
 
     const emailInput =
-        document.getElementById(
-            "loginEmail"
-        );
+        document.getElementById("loginEmail");
 
 
     const passwordInput =
-        document.getElementById(
-            "loginPassword"
-        );
+        document.getElementById("loginPassword");
 
 
     const error =
-        document.getElementById(
-            "loginError"
-        );
+        document.getElementById("loginError");
 
 
     const button =
-        document.getElementById(
-            "loginButton"
-        );
+        document.getElementById("loginButton");
 
 
     if (
@@ -222,10 +227,11 @@ async function performLogin() {
     ) {
 
         console.error(
-            "❌ Login elements not found"
+            "❌ Login elements not found."
         );
 
         return;
+
     }
 
 
@@ -237,9 +243,9 @@ async function performLogin() {
         passwordInput.value;
 
 
-    // =================================================
+    // -------------------------------------------------
     // VALIDATION
-    // =================================================
+    // -------------------------------------------------
 
     if (!email) {
 
@@ -249,6 +255,7 @@ async function performLogin() {
         emailInput.focus();
 
         return;
+
     }
 
 
@@ -260,6 +267,7 @@ async function performLogin() {
         passwordInput.focus();
 
         return;
+
     }
 
 
@@ -272,11 +280,16 @@ async function performLogin() {
         "";
 
 
-    // =================================================
-    // LOGIN REQUEST
-    // =================================================
+    // -------------------------------------------------
+    // API LOGIN
+    // -------------------------------------------------
 
     try {
+
+        console.log(
+            "🔄 Signing in..."
+        );
+
 
         const result =
             await apiLogin(
@@ -298,22 +311,18 @@ async function performLogin() {
         }
 
 
-        // =================================================
-        // VERIFY USER
-        // =================================================
-
         if (!result.user) {
 
             throw new Error(
-                "Login succeeded, but the server did not return your account."
+                "Login succeeded, but no user account was returned."
             );
 
         }
 
 
-        // =================================================
-        // SAVE SESSION
-        // =================================================
+        // -------------------------------------------------
+        // SAVE USER
+        // -------------------------------------------------
 
         const user = {
 
@@ -321,8 +330,7 @@ async function performLogin() {
 
             ...(result.token
                 ? {
-                    token:
-                        result.token
+                    token: result.token
                 }
                 : {})
 
@@ -332,25 +340,32 @@ async function performLogin() {
         setUser(user);
 
 
-        // =================================================
-        // OPEN APPLICATION
-        // =================================================
+        console.log(
+            "✅ Login successful."
+        );
+
+
+        // -------------------------------------------------
+        // OPEN APP
+        // -------------------------------------------------
 
         showApp();
 
 
-    } catch (error) {
+    } catch (err) {
 
         console.error(
             "❌ Login error:",
-            error
+            err
         );
 
 
-        errorMessage(
-            error.message ||
-            "Unable to sign in."
-        );
+        const message =
+            err?.message ||
+            "Unable to sign in.";
+
+
+        errorMessage(message);
 
 
         button.disabled = false;
@@ -389,7 +404,7 @@ function errorMessage(message) {
 // SHOW APPLICATION
 // =====================================================
 
-function showApp() {
+async function showApp() {
 
     const nav =
         document.getElementById(
@@ -409,9 +424,97 @@ function showApp() {
     setupNavigation();
 
 
-    navigate(
-        "home"
-    );
+    try {
+
+        console.log(
+            "🚀 Opening SaloneBiz home..."
+        );
+
+
+        await navigate("home");
+
+
+        console.log(
+            "✅ SaloneBiz home loaded."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ Failed to open home:",
+            error
+        );
+
+
+        const app =
+            document.getElementById("app");
+
+
+        if (app) {
+
+            app.innerHTML = `
+
+                <div class="page">
+
+                    <main class="container">
+
+                        <div
+                            class="create-box"
+                            style="
+                                margin-top:30px;
+                                text-align:center;
+                            "
+                        >
+
+                            <div style="
+                                font-size:50px;
+                                margin-bottom:15px;
+                            ">
+                                ⚠️
+                            </div>
+
+                            <h2>
+                                SaloneBiz couldn't open
+                            </h2>
+
+                            <p
+                                class="text-muted"
+                                style="margin-top:10px;"
+                            >
+                                ${escapeHtml(
+                                    error?.message ||
+                                    "The home page failed to load."
+                                )}
+                            </p>
+
+                            <button
+                                class="primary-button"
+                                id="openHomeAgain"
+                                type="button"
+                            >
+                                Open Home Again
+                            </button>
+
+                        </div>
+
+                    </main>
+
+                </div>
+
+            `;
+
+
+            document
+                .getElementById("openHomeAgain")
+                ?.addEventListener(
+                    "click",
+                    () => showApp()
+                );
+
+        }
+
+    }
 
 }
 
@@ -422,15 +525,28 @@ function showApp() {
 
 export function logout() {
 
-    // Clear API token
-    apiLogout();
+    console.log(
+        "👋 Logging out..."
+    );
 
 
-    // Clear frontend state
+    try {
+
+        apiLogout();
+
+    } catch (error) {
+
+        console.warn(
+            "⚠️ API logout cleanup error:",
+            error
+        );
+
+    }
+
+
     clearUser();
 
 
-    // Hide navigation
     const nav =
         document.getElementById(
             "bottomNav"
@@ -446,7 +562,6 @@ export function logout() {
     }
 
 
-    // Return to login
     showLogin();
 
 }
@@ -467,7 +582,7 @@ function setupNavigation() {
     buttons.forEach(
         button => {
 
-            button.onclick = () => {
+            button.onclick = async () => {
 
                 const page =
                     button.dataset.page;
@@ -478,11 +593,38 @@ function setupNavigation() {
                 }
 
 
-                navigate(page);
+                try {
+
+                    await navigate(page);
+
+                } catch (error) {
+
+                    console.error(
+                        "❌ Navigation error:",
+                        error
+                    );
+
+                }
 
             };
 
         }
     );
+
+}
+
+
+// =====================================================
+// ESCAPE HTML
+// =====================================================
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
