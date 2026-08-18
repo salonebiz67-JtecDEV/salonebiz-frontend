@@ -1,311 +1,463 @@
-const API_BASE = "https://salonebiz-backend.onrender.com";
+// =====================================================
+// 🇸🇱 SALONEBIZ APPLICATION
+// Main application controller
+// =====================================================
 
-async function apiRequest(endpoint, options = {}) {
-    const token = localStorage.getItem("salonebiz_token");
+import {
+    initializeAuth
+} from "./auth.js";
 
-    const headers = {
-        "Content-Type": "application/json",
-        ...(options.headers || {})
-    };
+import {
+    loadUser
+} from "./state.js";
 
-    if (token) {
-        headers.Authorization = `Bearer ${token}`;
-    }
+import {
+    checkAPI
+} from "./api.js";
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers
-    });
 
-    let data;
+// =====================================================
+// APPLICATION STATE
+// =====================================================
 
-    try {
-        data = await response.json();
-    } catch {
-        data = {
-            success: false,
-            message: "Invalid server response"
-        };
-    }
+const app =
+    document.getElementById("app");
 
-    if (!response.ok) {
-        throw new Error(
-            data.message || `Request failed: ${response.status}`
+const loader =
+    document.getElementById("app-loader");
+
+const bottomNav =
+    document.getElementById("bottomNav");
+
+
+// =====================================================
+// START APPLICATION
+// =====================================================
+
+async function startApp() {
+
+    console.log(
+        "🇸🇱 Starting SaloneBiz..."
+    );
+
+
+    // -------------------------------------------------
+    // Verify required HTML
+    // -------------------------------------------------
+
+    if (!app) {
+
+        console.error(
+            "❌ #app element was not found."
         );
+
+        return;
     }
 
-    return data;
-}
+
+    // -------------------------------------------------
+    // Show loading state
+    // -------------------------------------------------
+
+    showLoader();
 
 
-/* ==========================================
-   AUTH
-========================================== */
+    // -------------------------------------------------
+    // Load saved session
+    // -------------------------------------------------
 
-export async function login(email, password) {
-    return apiRequest("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-            email,
-            password
-        })
-    });
-}
+    loadUser();
 
 
-export async function register(
-    name,
-    email,
-    password,
-    phone
-) {
-    return apiRequest("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-            name,
-            email,
-            password,
-            phone
-        })
-    });
-}
+    // -------------------------------------------------
+    // Check backend
+    // -------------------------------------------------
+
+    checkBackend();
 
 
-export async function checkAPI() {
+    // -------------------------------------------------
+    // Initialize authentication
+    // -------------------------------------------------
+
     try {
-        return await apiRequest("/api/health");
+
+        initializeAuth();
+
     } catch (error) {
-        return {
-            success: false,
-            status: "offline",
-            message: error.message
-        };
-    }
-}
 
-
-/* ==========================================
-   POSTS
-========================================== */
-
-export async function getPosts() {
-    return apiRequest("/api/posts");
-}
-
-
-export async function createPost(post) {
-    return apiRequest("/api/posts", {
-        method: "POST",
-        body: JSON.stringify(post)
-    });
-}
-
-
-export async function getPost(postId) {
-    return apiRequest(`/api/posts/${postId}`);
-}
-
-
-export async function deletePost(postId) {
-    return apiRequest(`/api/posts/${postId}`, {
-        method: "DELETE"
-    });
-}
-
-
-/* ==========================================
-   LIKES
-========================================== */
-
-export async function likePost(postId) {
-    return apiRequest(
-        `/api/posts/${postId}/like`,
-        {
-            method: "POST"
-        }
-    );
-}
-
-
-export async function unlikePost(postId) {
-    return apiRequest(
-        `/api/posts/${postId}/like`,
-        {
-            method: "DELETE"
-        }
-    );
-}
-
-
-/* ==========================================
-   FAVORITES
-========================================== */
-
-export async function favoritePost(postId) {
-    return apiRequest(
-        `/api/posts/${postId}/favorite`,
-        {
-            method: "POST"
-        }
-    );
-}
-
-
-export async function unfavoritePost(postId) {
-    return apiRequest(
-        `/api/posts/${postId}/favorite`,
-        {
-            method: "DELETE"
-        }
-    );
-}
-
-
-/* ==========================================
-   FOLLOWING
-========================================== */
-
-export async function followUser(userId) {
-    return apiRequest(
-        `/api/friends/${userId}/follow`,
-        {
-            method: "POST"
-        }
-    );
-}
-
-
-export async function unfollowUser(userId) {
-    return apiRequest(
-        `/api/friends/${userId}/follow`,
-        {
-            method: "DELETE"
-        }
-    );
-}
-
-
-export async function getFollowers(userId) {
-    return apiRequest(
-        `/api/friends/${userId}/followers`
-    );
-}
-
-
-export async function getFollowing(userId) {
-    return apiRequest(
-        `/api/friends/${userId}/following`
-    );
-}
-
-
-/* ==========================================
-   PROFILE
-========================================== */
-
-export async function getProfile(userId) {
-
-    if (userId) {
-        return apiRequest(
-            `/api/profile/${userId}`
+        console.error(
+            "❌ Authentication initialization failed:",
+            error
         );
+
+
+        showFatalError(
+            "Unable to start SaloneBiz."
+        );
+
     }
 
-    return apiRequest("/api/profile/me");
+
+    // -------------------------------------------------
+    // Hide loader
+    // -------------------------------------------------
+
+    hideLoader();
+
 }
 
 
-export async function updateProfile(profile) {
-    return apiRequest(
-        "/api/profile/me",
-        {
-            method: "PUT",
-            body: JSON.stringify(profile)
+// =====================================================
+// BACKEND HEALTH CHECK
+// =====================================================
+
+async function checkBackend() {
+
+    try {
+
+        const result =
+            await checkAPI();
+
+
+        if (
+            result &&
+            (
+                result.status === "healthy" ||
+                result.success === true
+            )
+        ) {
+
+            console.log(
+                "🟢 SaloneBiz API is online."
+            );
+
+
+            updateAPIStatus(
+                true
+            );
+
+
+        } else {
+
+            console.warn(
+                "🟠 SaloneBiz API responded, but may not be healthy."
+            );
+
+
+            updateAPIStatus(
+                false
+            );
+
         }
-    );
+
+
+    } catch (error) {
+
+        console.warn(
+            "🔴 SaloneBiz API unavailable:",
+            error
+        );
+
+
+        updateAPIStatus(
+            false
+        );
+
+    }
+
 }
 
 
-/* ==========================================
-   SEARCH
-========================================== */
+// =====================================================
+// API STATUS UI
+// =====================================================
 
-export async function search(query) {
-
-    const params =
-        new URLSearchParams({
-            q: query
-        });
-
-    return apiRequest(
-        `/api/search?${params.toString()}`
-    );
-}
-
-
-/* ==========================================
-   COMMENTS
-========================================== */
-
-export async function getComments(postId) {
-    return apiRequest(
-        `/api/posts/${postId}/comments`
-    );
-}
-
-
-export async function addComment(
-    postId,
-    text
+function updateAPIStatus(
+    online
 ) {
-    return apiRequest(
-        `/api/posts/${postId}/comments`,
-        {
-            method: "POST",
-            body: JSON.stringify({
-                text
-            })
-        }
+
+    const status =
+        document.getElementById(
+            "apiStatus"
+        );
+
+
+    if (!status) {
+        return;
+    }
+
+
+    if (online) {
+
+        status.textContent =
+            "API Online";
+
+        status.classList.remove(
+            "offline"
+        );
+
+        status.classList.add(
+            "online"
+        );
+
+    } else {
+
+        status.textContent =
+            "API Offline";
+
+        status.classList.remove(
+            "online"
+        );
+
+        status.classList.add(
+            "offline"
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// LOADER
+// =====================================================
+
+function showLoader() {
+
+    if (!loader) {
+        return;
+    }
+
+
+    loader.classList.remove(
+        "hidden"
     );
+
 }
 
 
-/* ==========================================
-   GENERIC HELPERS
-========================================== */
+function hideLoader() {
 
-export async function apiGet(endpoint) {
-    return apiRequest(endpoint);
+    if (!loader) {
+        return;
+    }
+
+
+    setTimeout(
+        () => {
+
+            loader.classList.add(
+                "hidden"
+            );
+
+        },
+        350
+    );
+
 }
 
 
-export async function apiPost(
-    endpoint,
-    body = {}
+// =====================================================
+// FATAL ERROR
+// =====================================================
+
+function showFatalError(
+    message
 ) {
-    return apiRequest(endpoint, {
-        method: "POST",
-        body: JSON.stringify(body)
-    });
+
+    if (!app) {
+        return;
+    }
+
+
+    app.innerHTML = `
+
+        <div class="page">
+
+            <main class="container">
+
+                <div
+                    class="create-box"
+                    style="
+                        text-align:center;
+                        margin-top:80px;
+                    "
+                >
+
+                    <div
+                        style="
+                            font-size:55px;
+                            margin-bottom:15px;
+                        "
+                    >
+                        ⚠️
+                    </div>
+
+
+                    <h2>
+                        SaloneBiz couldn't start
+                    </h2>
+
+
+                    <p class="text-muted">
+                        ${escapeHtml(message)}
+                    </p>
+
+
+                    <button
+                        class="primary-button"
+                        id="reloadApp"
+                        type="button"
+                    >
+                        Reload
+                    </button>
+
+                </div>
+
+            </main>
+
+        </div>
+
+    `;
+
+
+    document
+        .getElementById(
+            "reloadApp"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                window.location.reload();
+
+            }
+        );
+
 }
 
 
-export async function apiPut(
-    endpoint,
-    body = {}
+// =====================================================
+// HTML ESCAPE
+// =====================================================
+
+function escapeHtml(
+    value
 ) {
-    return apiRequest(endpoint, {
-        method: "PUT",
-        body: JSON.stringify(body)
-    });
+
+    return String(
+        value ?? ""
+    ).replace(
+        /[&<>"']/g,
+        character => ({
+
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+
+        })[character]
+    );
+
 }
 
 
-export async function apiDelete(endpoint) {
-    return apiRequest(endpoint, {
-        method: "DELETE"
-    });
+// =====================================================
+// GLOBAL EVENTS
+// =====================================================
+
+
+// Login completed
+window.addEventListener(
+    "auth:success",
+    () => {
+
+        console.log(
+            "✅ Authentication successful."
+        );
+
+    }
+);
+
+
+// Logout completed
+window.addEventListener(
+    "auth:logout",
+    () => {
+
+        console.log(
+            "👋 User logged out."
+        );
+
+    }
+);
+
+
+// Network comes back
+window.addEventListener(
+    "online",
+    () => {
+
+        console.log(
+            "🟢 Internet connection restored."
+        );
+
+        checkBackend();
+
+    }
+);
+
+
+// Network goes offline
+window.addEventListener(
+    "offline",
+    () => {
+
+        console.warn(
+            "🔴 Internet connection lost."
+        );
+
+        updateAPIStatus(
+            false
+        );
+
+    }
+);
+
+
+// =====================================================
+// START WHEN DOM IS READY
+// =====================================================
+
+if (
+    document.readyState ===
+    "loading"
+) {
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        startApp
+    );
+
+} else {
+
+    startApp();
+
 }
 
 
-export { API_BASE };
+// =====================================================
+// DEBUG
+// =====================================================
+
+window.SaloneBizApp = {
+
+    start:
+        startApp,
+
+    checkAPI:
+        checkBackend
+
+};
