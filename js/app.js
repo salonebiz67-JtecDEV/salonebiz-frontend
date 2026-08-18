@@ -1,14 +1,16 @@
 // =====================================================
-// 🇸🇱 SALONEBIZ APPLICATION
-// Main application controller
+// 🇸🇱 SALONEBIZ MAIN APPLICATION
+// js/app.js
 // =====================================================
 
 import {
-    initializeAuth
+    initializeAuth,
+    logout
 } from "./auth.js";
 
 import {
-    loadUser
+    loadUser,
+    getUser
 } from "./state.js";
 
 import {
@@ -17,24 +19,20 @@ import {
 
 
 // =====================================================
-// APPLICATION STATE
+// APP STARTUP
 // =====================================================
 
-const app =
-    document.getElementById("app");
-
-const loader =
-    document.getElementById("app-loader");
-
-const bottomNav =
-    document.getElementById("bottomNav");
+document.addEventListener(
+    "DOMContentLoaded",
+    initializeApp
+);
 
 
 // =====================================================
-// START APPLICATION
+// INITIALIZE APPLICATION
 // =====================================================
 
-async function startApp() {
+async function initializeApp() {
 
     console.log(
         "🇸🇱 Starting SaloneBiz..."
@@ -42,13 +40,20 @@ async function startApp() {
 
 
     // -------------------------------------------------
-    // Verify required HTML
+    // Make sure required elements exist
     // -------------------------------------------------
+
+    const app =
+        document.getElementById("app");
+
+    const bottomNav =
+        document.getElementById("bottomNav");
+
 
     if (!app) {
 
         console.error(
-            "❌ #app element was not found."
+            "❌ SaloneBiz: #app element not found."
         );
 
         return;
@@ -56,28 +61,34 @@ async function startApp() {
 
 
     // -------------------------------------------------
-    // Show loading state
-    // -------------------------------------------------
-
-    showLoader();
-
-
-    // -------------------------------------------------
-    // Load saved session
+    // Restore saved session
     // -------------------------------------------------
 
     loadUser();
 
 
-    // -------------------------------------------------
-    // Check backend
-    // -------------------------------------------------
-
-    checkBackend();
+    const user =
+        getUser();
 
 
+    if (user) {
+
+        console.log(
+            "👤 Existing SaloneBiz session found:",
+            user.email || user.name
+        );
+
+    } else {
+
+        console.log(
+            "👤 No active SaloneBiz session."
+        );
+
+    }
+
+
     // -------------------------------------------------
-    // Initialize authentication
+    // Start authentication system
     // -------------------------------------------------
 
     try {
@@ -91,25 +102,118 @@ async function startApp() {
             error
         );
 
-
         showFatalError(
-            "Unable to start SaloneBiz."
+            app,
+            "Unable to start authentication."
         );
 
+        return;
     }
 
 
     // -------------------------------------------------
-    // Hide loader
+    // Setup global navigation
     // -------------------------------------------------
 
-    hideLoader();
+    setupNavigation();
+
+
+    // -------------------------------------------------
+    // API health check
+    // -------------------------------------------------
+
+    checkBackend();
+
+
+    // -------------------------------------------------
+    // Global logout listener
+    // -------------------------------------------------
+
+    window.addEventListener(
+        "salonebiz:logout",
+        () => {
+
+            console.log(
+                "👋 SaloneBiz user logged out."
+            );
+
+            logout();
+
+        }
+    );
+
+
+    // -------------------------------------------------
+    // Application ready
+    // -------------------------------------------------
+
+    window.dispatchEvent(
+        new CustomEvent(
+            "salonebiz:ready"
+        )
+    );
+
+
+    console.log(
+        "✅ SaloneBiz application ready."
+    );
+}
+
+
+// =====================================================
+// NAVIGATION
+// =====================================================
+
+function setupNavigation() {
+
+    const buttons =
+        document.querySelectorAll(
+            "#bottomNav [data-page]"
+        );
+
+
+    if (!buttons.length) {
+
+        console.warn(
+            "⚠️ No navigation buttons found."
+        );
+
+        return;
+    }
+
+
+    buttons.forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    const page =
+                        button.dataset.page;
+
+
+                    if (!page) {
+                        return;
+                    }
+
+
+                    console.log(
+                        "📄 Navigation:",
+                        page
+                    );
+
+                }
+            );
+
+        }
+    );
 
 }
 
 
 // =====================================================
-// BACKEND HEALTH CHECK
+// BACKEND HEALTH
 // =====================================================
 
 async function checkBackend() {
@@ -123,46 +227,41 @@ async function checkBackend() {
         if (
             result &&
             (
-                result.status === "healthy" ||
-                result.success === true
+                result.success ||
+                result.status === "healthy"
             )
         ) {
 
             console.log(
-                "🟢 SaloneBiz API is online."
+                "🟢 SaloneBiz backend online."
             );
 
 
-            updateAPIStatus(
-                true
-            );
-
+            document.body.dataset.api =
+                "online";
 
         } else {
 
             console.warn(
-                "🟠 SaloneBiz API responded, but may not be healthy."
+                "🟡 SaloneBiz backend responded but is not healthy."
             );
 
 
-            updateAPIStatus(
-                false
-            );
-
+            document.body.dataset.api =
+                "degraded";
         }
 
 
     } catch (error) {
 
         console.warn(
-            "🔴 SaloneBiz API unavailable:",
+            "🔴 SaloneBiz backend unavailable:",
             error
         );
 
 
-        updateAPIStatus(
-            false
-        );
+        document.body.dataset.api =
+            "offline";
 
     }
 
@@ -170,170 +269,74 @@ async function checkBackend() {
 
 
 // =====================================================
-// API STATUS UI
-// =====================================================
-
-function updateAPIStatus(
-    online
-) {
-
-    const status =
-        document.getElementById(
-            "apiStatus"
-        );
-
-
-    if (!status) {
-        return;
-    }
-
-
-    if (online) {
-
-        status.textContent =
-            "API Online";
-
-        status.classList.remove(
-            "offline"
-        );
-
-        status.classList.add(
-            "online"
-        );
-
-    } else {
-
-        status.textContent =
-            "API Offline";
-
-        status.classList.remove(
-            "online"
-        );
-
-        status.classList.add(
-            "offline"
-        );
-
-    }
-
-}
-
-
-// =====================================================
-// LOADER
-// =====================================================
-
-function showLoader() {
-
-    if (!loader) {
-        return;
-    }
-
-
-    loader.classList.remove(
-        "hidden"
-    );
-
-}
-
-
-function hideLoader() {
-
-    if (!loader) {
-        return;
-    }
-
-
-    setTimeout(
-        () => {
-
-            loader.classList.add(
-                "hidden"
-            );
-
-        },
-        350
-    );
-
-}
-
-
-// =====================================================
-// FATAL ERROR
+// FATAL ERROR SCREEN
 // =====================================================
 
 function showFatalError(
+    app,
     message
 ) {
 
-    if (!app) {
-        return;
-    }
-
-
     app.innerHTML = `
 
-        <div class="page">
+        <div
+            class="page"
+            style="
+                min-height:100vh;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                padding:24px;
+            "
+        >
 
-            <main class="container">
+            <div
+                class="create-box"
+                style="
+                    width:100%;
+                    max-width:500px;
+                    text-align:center;
+                "
+            >
 
                 <div
-                    class="create-box"
                     style="
-                        text-align:center;
-                        margin-top:80px;
+                        font-size:55px;
+                        margin-bottom:15px;
                     "
                 >
-
-                    <div
-                        style="
-                            font-size:55px;
-                            margin-bottom:15px;
-                        "
-                    >
-                        ⚠️
-                    </div>
-
-
-                    <h2>
-                        SaloneBiz couldn't start
-                    </h2>
-
-
-                    <p class="text-muted">
-                        ${escapeHtml(message)}
-                    </p>
-
-
-                    <button
-                        class="primary-button"
-                        id="reloadApp"
-                        type="button"
-                    >
-                        Reload
-                    </button>
-
+                    🇸🇱
                 </div>
 
-            </main>
+
+                <h1>
+                    SaloneBiz
+                </h1>
+
+
+                <h2>
+                    Something went wrong
+                </h2>
+
+
+                <p class="text-muted">
+                    ${escapeHtml(message)}
+                </p>
+
+
+                <button
+                    class="primary-button"
+                    type="button"
+                    onclick="location.reload()"
+                >
+                    Reload app
+                </button>
+
+            </div>
 
         </div>
 
     `;
-
-
-    document
-        .getElementById(
-            "reloadApp"
-        )
-        ?.addEventListener(
-            "click",
-            () => {
-
-                window.location.reload();
-
-            }
-        );
 
 }
 
@@ -342,9 +345,7 @@ function showFatalError(
 // HTML ESCAPE
 // =====================================================
 
-function escapeHtml(
-    value
-) {
+function escapeHtml(value) {
 
     return String(
         value ?? ""
@@ -362,102 +363,3 @@ function escapeHtml(
     );
 
 }
-
-
-// =====================================================
-// GLOBAL EVENTS
-// =====================================================
-
-
-// Login completed
-window.addEventListener(
-    "auth:success",
-    () => {
-
-        console.log(
-            "✅ Authentication successful."
-        );
-
-    }
-);
-
-
-// Logout completed
-window.addEventListener(
-    "auth:logout",
-    () => {
-
-        console.log(
-            "👋 User logged out."
-        );
-
-    }
-);
-
-
-// Network comes back
-window.addEventListener(
-    "online",
-    () => {
-
-        console.log(
-            "🟢 Internet connection restored."
-        );
-
-        checkBackend();
-
-    }
-);
-
-
-// Network goes offline
-window.addEventListener(
-    "offline",
-    () => {
-
-        console.warn(
-            "🔴 Internet connection lost."
-        );
-
-        updateAPIStatus(
-            false
-        );
-
-    }
-);
-
-
-// =====================================================
-// START WHEN DOM IS READY
-// =====================================================
-
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        startApp
-    );
-
-} else {
-
-    startApp();
-
-}
-
-
-// =====================================================
-// DEBUG
-// =====================================================
-
-window.SaloneBizApp = {
-
-    start:
-        startApp,
-
-    checkAPI:
-        checkBackend
-
-};
