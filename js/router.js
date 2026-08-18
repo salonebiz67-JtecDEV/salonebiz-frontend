@@ -3,6 +3,10 @@
 // js/router.js
 // =====================================================
 
+// =====================================================
+// PAGE IMPORTS
+// =====================================================
+
 import {
     renderHome
 } from "./pages/home.js";
@@ -10,6 +14,26 @@ import {
 import {
     renderFriends
 } from "./pages/friends.js";
+
+import {
+    renderCreate
+} from "./pages/create.js";
+
+import {
+    renderProfile
+} from "./pages/profile.js";
+
+import {
+    renderSearch
+} from "./pages/search.js";
+
+import {
+    renderInbox
+} from "./pages/inbox.js";
+
+import {
+    renderSettings
+} from "./pages/settings.js";
 
 
 // =====================================================
@@ -20,7 +44,17 @@ const routes = {
 
     home: renderHome,
 
-    friends: renderFriends
+    friends: renderFriends,
+
+    create: renderCreate,
+
+    profile: renderProfile,
+
+    search: renderSearch,
+
+    inbox: renderInbox,
+
+    settings: renderSettings
 
 };
 
@@ -37,6 +71,10 @@ export async function navigate(
         document.getElementById("app");
 
 
+    // -------------------------------------------------
+    // APP CONTAINER CHECK
+    // -------------------------------------------------
+
     if (!app) {
 
         console.error(
@@ -48,12 +86,16 @@ export async function navigate(
     }
 
 
+    // -------------------------------------------------
+    // FIND PAGE
+    // -------------------------------------------------
+
     const renderer =
         routes[page];
 
 
     // -------------------------------------------------
-    // Unknown page
+    // UNKNOWN PAGE
     // -------------------------------------------------
 
     if (!renderer) {
@@ -68,14 +110,14 @@ export async function navigate(
 
 
     // -------------------------------------------------
-    // Update navigation
+    // UPDATE NAVIGATION
     // -------------------------------------------------
 
     updateNavigation(page);
 
 
     // -------------------------------------------------
-    // Loading state
+    // LOADING SCREEN
     // -------------------------------------------------
 
     app.innerHTML = `
@@ -95,11 +137,12 @@ export async function navigate(
                         text-align:center;
                     ">
 
-                        <div class="loader"
-                             style="
+                        <div
+                            class="loader"
+                            style="
                                 margin:auto;
-                             ">
-                        </div>
+                            "
+                        ></div>
 
                         <p
                             class="text-muted"
@@ -121,16 +164,16 @@ export async function navigate(
     `;
 
 
+    // -------------------------------------------------
+    // RENDER PAGE
+    // -------------------------------------------------
+
     try {
 
         console.log(
             `📄 Loading page: ${page}`
         );
 
-
-        // -------------------------------------------------
-        // Render page
-        // -------------------------------------------------
 
         await renderer(app);
 
@@ -141,11 +184,45 @@ export async function navigate(
 
 
         // -------------------------------------------------
-        // Store current page
+        // SAVE CURRENT PAGE
         // -------------------------------------------------
 
         window.SaloneBizCurrentPage =
             page;
+
+
+        // -------------------------------------------------
+        // UPDATE URL
+        // -------------------------------------------------
+
+        try {
+
+            const newUrl =
+                `#${page}`;
+
+            if (
+                window.location.hash !==
+                newUrl
+            ) {
+
+                history.replaceState(
+                    {
+                        page
+                    },
+                    "",
+                    newUrl
+                );
+
+            }
+
+        } catch (error) {
+
+            console.warn(
+                "⚠️ Could not update URL:",
+                error
+            );
+
+        }
 
 
     } catch (error) {
@@ -179,9 +256,11 @@ export async function navigate(
                             ⚠️
                         </div>
 
+
                         <h2>
                             Something went wrong
                         </h2>
+
 
                         <p
                             class="text-muted"
@@ -194,6 +273,7 @@ export async function navigate(
                                 "Unable to load this page."
                             )}
                         </p>
+
 
                         <button
                             class="primary-button"
@@ -213,7 +293,9 @@ export async function navigate(
 
 
         document
-            .getElementById("routerRetry")
+            .getElementById(
+                "routerRetry"
+            )
             ?.addEventListener(
                 "click",
                 () => navigate(page)
@@ -248,6 +330,67 @@ function updateNavigation(
             );
 
         });
+
+}
+
+
+// =====================================================
+// HASH NAVIGATION
+// =====================================================
+
+export function setupRouter() {
+
+    window.addEventListener(
+        "hashchange",
+        () => {
+
+            const page =
+                window.location.hash
+                    .replace(
+                        "#",
+                        ""
+                    )
+                    .trim();
+
+
+            if (
+                page &&
+                routes[page]
+            ) {
+
+                navigate(page);
+
+            }
+
+        }
+    );
+
+
+    // -------------------------------------------------
+    // INITIAL PAGE
+    // -------------------------------------------------
+
+    const initialPage =
+        window.location.hash
+            .replace(
+                "#",
+                ""
+            )
+            .trim();
+
+
+    if (
+        initialPage &&
+        routes[initialPage]
+    ) {
+
+        navigate(initialPage);
+
+    } else {
+
+        navigate("home");
+
+    }
 
 }
 
@@ -294,6 +437,19 @@ export function getCurrentPage() {
     return (
         window.SaloneBizCurrentPage ||
         "home"
+    );
+
+}
+
+
+// =====================================================
+// AVAILABLE ROUTES
+// =====================================================
+
+export function getRoutes() {
+
+    return Object.keys(
+        routes
     );
 
 }
