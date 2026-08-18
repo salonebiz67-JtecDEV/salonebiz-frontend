@@ -1,3 +1,5 @@
+import { navigate } from "./router.js";
+
 document.addEventListener("DOMContentLoaded", () => {
 
     const app =
@@ -21,15 +23,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     🇸🇱
                 </div>
 
-                <h1>SaloneBiz</h1>
+                <h1>
+                    SaloneBiz
+                </h1>
 
                 <p>
-                    Testing state module...
+                    Router module loaded successfully.
                 </p>
 
             </div>
 
         </div>
     `;
+
+    console.log(
+        "Router:",
+        navigate
+    );
 
 });
