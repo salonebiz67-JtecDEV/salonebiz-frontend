@@ -1,68 +1,87 @@
-import { checkAPI } from "./api.js";
+import {
+    initializeAuth
+} from "./auth.js";
 
-document.addEventListener("DOMContentLoaded", async () => {
+import {
+    loadUser
+} from "./state.js";
 
-    const app =
-        document.getElementById("app");
 
-    app.innerHTML = `
-        <div style="
-            min-height:100vh;
-            background:#050816;
-            color:white;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            text-align:center;
-            font-family:Arial,sans-serif;
-        ">
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-            <div>
+        const app =
+            document.getElementById("app");
 
-                <div style="font-size:60px;">
-                    🇸🇱
+
+        app.innerHTML = `
+            <div style="
+                min-height:100vh;
+                background:#050816;
+                color:white;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                text-align:center;
+                font-family:Arial,sans-serif;
+            ">
+
+                <div>
+
+                    <div style="font-size:60px;">
+                        🇸🇱
+                    </div>
+
+                    <h1>
+                        SaloneBiz
+                    </h1>
+
+                    <p id="status">
+                        Testing authentication module...
+                    </p>
+
                 </div>
 
-                <h1>
-                    SaloneBiz
-                </h1>
-
-                <p id="status">
-                    Testing API module...
-                </p>
-
             </div>
+        `;
 
-        </div>
-    `;
 
-    const status =
-        document.getElementById("status");
+        const status =
+            document.getElementById(
+                "status"
+            );
 
-    try {
 
-        const result =
-            await checkAPI();
+        try {
 
-        console.log(
-            "API RESULT:",
-            result
-        );
+            const user =
+                loadUser();
 
-        status.textContent =
-            "✅ API module loaded successfully";
 
-    } catch (error) {
+            console.log(
+                "Loaded user:",
+                user
+            );
 
-        console.error(
-            "API TEST ERROR:",
-            error
-        );
 
-        status.textContent =
-            "❌ API module failed: " +
-            error.message;
+            status.textContent =
+                "✅ Auth modules loaded successfully";
+
+
+        } catch (error) {
+
+            console.error(
+                "❌ Auth module error:",
+                error
+            );
+
+
+            status.textContent =
+                "❌ Auth error: " +
+                error.message;
+
+        }
 
     }
-
-});
+);
