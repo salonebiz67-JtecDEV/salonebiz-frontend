@@ -1,5 +1,6 @@
 // =====================================================
 // 🇸🇱 SALONEBIZ CREATE POST
+// FIXED SUPABASE AUTHENTICATED IMAGE UPLOAD
 // =====================================================
 
 import {
@@ -8,7 +9,7 @@ import {
 
 
 // =====================================================
-// SUPABASE STORAGE
+// SUPABASE
 // =====================================================
 
 const SUPABASE_URL =
@@ -19,6 +20,18 @@ const SUPABASE_PUBLISHABLE_KEY =
 
 const STORAGE_BUCKET =
     "posts";
+
+
+// =====================================================
+// SUPABASE CLIENT
+// =====================================================
+
+const supabase =
+    window.supabaseClient ||
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+    );
 
 
 // =====================================================
@@ -43,7 +56,6 @@ export async function renderCreate(app) {
 
             </header>
 
-
             <main class="container">
 
                 <h1 class="page-title">
@@ -54,10 +66,7 @@ export async function renderCreate(app) {
                     Upload a photo and tell people about your business.
                 </p>
 
-
                 <section class="create-box">
-
-                    <!-- IMAGE UPLOAD -->
 
                     <label
                         class="upload-area"
@@ -83,16 +92,12 @@ export async function renderCreate(app) {
 
                     </label>
 
-
                     <input
                         id="imageInput"
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         hidden
                     >
-
-
-                    <!-- BUSINESS NAME -->
 
                     <input
                         class="form-input"
@@ -102,9 +107,6 @@ export async function renderCreate(app) {
                         placeholder="Business name"
                     >
 
-
-                    <!-- LOCATION -->
-
                     <input
                         class="form-input"
                         id="location"
@@ -112,9 +114,6 @@ export async function renderCreate(app) {
                         maxlength="200"
                         placeholder="Location"
                     >
-
-
-                    <!-- DESCRIPTION -->
 
                     <textarea
                         class="form-input"
@@ -124,9 +123,6 @@ export async function renderCreate(app) {
                         placeholder="Tell people about your business..."
                     ></textarea>
 
-
-                    <!-- STATUS -->
-
                     <p
                         id="publishStatus"
                         style="
@@ -135,9 +131,6 @@ export async function renderCreate(app) {
                             min-height:20px;
                         "
                     ></p>
-
-
-                    <!-- PUBLISH -->
 
                     <button
                         class="primary-button"
@@ -156,27 +149,16 @@ export async function renderCreate(app) {
 
 
     const input =
-        document.getElementById(
-            "imageInput"
-        );
-
+        document.getElementById("imageInput");
 
     const area =
-        document.getElementById(
-            "uploadArea"
-        );
-
+        document.getElementById("uploadArea");
 
     const button =
-        document.getElementById(
-            "publishButton"
-        );
-
+        document.getElementById("publishButton");
 
     const status =
-        document.getElementById(
-            "publishStatus"
-        );
+        document.getElementById("publishStatus");
 
 
     // =================================================
@@ -190,20 +172,15 @@ export async function renderCreate(app) {
             const file =
                 input.files?.[0];
 
-
             if (!file) {
                 return;
             }
-
-
-            // Check file type
 
             const allowedTypes = [
                 "image/jpeg",
                 "image/png",
                 "image/webp"
             ];
-
 
             if (
                 !allowedTypes.includes(
@@ -220,12 +197,8 @@ export async function renderCreate(app) {
                 return;
             }
 
-
-            // 10 MB limit
-
             const maxSize =
                 10 * 1024 * 1024;
-
 
             if (
                 file.size > maxSize
@@ -240,10 +213,8 @@ export async function renderCreate(app) {
                 return;
             }
 
-
             const reader =
                 new FileReader();
-
 
             reader.onload =
                 event => {
@@ -263,9 +234,7 @@ export async function renderCreate(app) {
                         >
 
                     `;
-
                 };
-
 
             reader.readAsDataURL(file);
 
@@ -274,7 +243,7 @@ export async function renderCreate(app) {
 
 
     // =================================================
-    // PUBLISH POST
+    // PUBLISH
     // =================================================
 
     button.addEventListener(
@@ -284,37 +253,24 @@ export async function renderCreate(app) {
             const file =
                 input.files?.[0];
 
-
             const business =
                 document
-                    .getElementById(
-                        "businessName"
-                    )
+                    .getElementById("businessName")
                     .value
                     .trim();
-
 
             const description =
                 document
-                    .getElementById(
-                        "description"
-                    )
+                    .getElementById("description")
                     .value
                     .trim();
-
 
             const location =
                 document
-                    .getElementById(
-                        "location"
-                    )
+                    .getElementById("location")
                     .value
                     .trim();
 
-
-            // =============================================
-            // VALIDATION
-            // =============================================
 
             if (!file) {
 
@@ -332,12 +288,6 @@ export async function renderCreate(app) {
                     "Enter your business name."
                 );
 
-                document
-                    .getElementById(
-                        "businessName"
-                    )
-                    .focus();
-
                 return;
             }
 
@@ -347,12 +297,6 @@ export async function renderCreate(app) {
                 alert(
                     "Enter your location."
                 );
-
-                document
-                    .getElementById(
-                        "location"
-                    )
-                    .focus();
 
                 return;
             }
@@ -364,35 +308,68 @@ export async function renderCreate(app) {
                     "Tell people something about your business."
                 );
 
-                document
-                    .getElementById(
-                        "description"
-                    )
-                    .focus();
-
                 return;
             }
 
 
-            // =============================================
-            // DISABLE BUTTON
-            // =============================================
-
             button.disabled = true;
 
             button.textContent =
-                "Uploading image...";
-
+                "Checking account...";
 
             status.textContent =
-                "Uploading your image...";
+                "Checking your SaloneBiz account...";
 
 
             try {
 
                 // =========================================
+                // CHECK AUTH SESSION
+                // =========================================
+
+                const {
+                    data: sessionData,
+                    error: sessionError
+                } =
+                    await supabase.auth.getSession();
+
+
+                if (sessionError) {
+
+                    throw sessionError;
+
+                }
+
+
+                const session =
+                    sessionData?.session;
+
+
+                if (!session?.access_token) {
+
+                    throw new Error(
+                        "You are not logged in. Please log in again."
+                    );
+
+                }
+
+
+                console.log(
+                    "✅ Authenticated user:",
+                    session.user.id
+                );
+
+
+                // =========================================
                 // UPLOAD IMAGE
                 // =========================================
+
+                button.textContent =
+                    "Uploading image...";
+
+                status.textContent =
+                    "Uploading your image...";
+
 
                 const imageUrl =
                     await uploadImage(
@@ -409,12 +386,11 @@ export async function renderCreate(app) {
 
 
                 // =========================================
-                // SEND POST TO BACKEND
+                // CREATE POST
                 // =========================================
 
                 button.textContent =
                     "Publishing...";
-
 
                 status.textContent =
                     "Saving your post...";
@@ -430,10 +406,6 @@ export async function renderCreate(app) {
 
                     });
 
-
-                // =========================================
-                // VERIFY BACKEND RESPONSE
-                // =========================================
 
                 if (
                     !result ||
@@ -455,14 +427,9 @@ export async function renderCreate(app) {
                 status.textContent =
                     "✅ Post published successfully!";
 
-
                 button.textContent =
                     "Published ✓";
 
-
-                // =========================================
-                // GO HOME
-                // =========================================
 
                 setTimeout(
                     () => {
@@ -480,7 +447,7 @@ export async function renderCreate(app) {
             } catch (error) {
 
                 console.error(
-                    "❌ Publish post error:",
+                    "❌ Publish error:",
                     error
                 );
 
@@ -491,7 +458,6 @@ export async function renderCreate(app) {
 
                 button.disabled =
                     false;
-
 
                 button.textContent =
                     "Publish Post";
@@ -511,7 +477,7 @@ export async function renderCreate(app) {
 
 
 // =====================================================
-// UPLOAD IMAGE TO SUPABASE STORAGE
+// UPLOAD IMAGE
 // =====================================================
 
 async function uploadImage(file) {
@@ -526,13 +492,42 @@ async function uploadImage(file) {
 
 
     // =============================================
-    // CREATE UNIQUE FILE NAME
+    // CURRENT AUTH SESSION
+    // =============================================
+
+    const {
+        data,
+        error: sessionError
+    } =
+        await supabase.auth.getSession();
+
+
+    if (sessionError) {
+
+        throw sessionError;
+
+    }
+
+
+    const session =
+        data?.session;
+
+
+    if (!session?.access_token) {
+
+        throw new Error(
+            "Your login session has expired. Please log in again."
+        );
+
+    }
+
+
+    // =============================================
+    // FILE NAME
     // =============================================
 
     const extension =
-        getFileExtension(
-            file
-        );
+        getFileExtension(file);
 
 
     const uniqueName =
@@ -544,73 +539,35 @@ async function uploadImage(file) {
 
 
     // =============================================
-    // UPLOAD
+    // UPLOAD THROUGH SUPABASE SDK
     // =============================================
 
-    const uploadUrl =
-        `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${storagePath}`;
+    const {
+        error
+    } =
+        await supabase
+            .storage
+            .from(STORAGE_BUCKET)
+            .upload(
+                storagePath,
+                file,
+                {
+                    cacheControl: "3600",
+                    contentType: file.type,
+                    upsert: false
+                }
+            );
 
 
-    const response =
-        await fetch(
-            uploadUrl,
-            {
-                method: "POST",
-
-                headers: {
-
-                    "Authorization":
-                        `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-
-                    "apikey":
-                        SUPABASE_PUBLISHABLE_KEY,
-
-                    "Content-Type":
-                        file.type,
-
-                    "x-upsert":
-                        "false"
-
-                },
-
-                body:
-                    file
-            }
-        );
-
-
-    const text =
-        await response.text();
-
-
-    let data = {};
-
-
-    try {
-
-        data =
-            text
-                ? JSON.parse(text)
-                : {};
-
-    } catch {
-
-        data = {};
-
-    }
-
-
-    if (!response.ok) {
+    if (error) {
 
         console.error(
-            "❌ Supabase Storage error:",
-            data
+            "❌ Storage upload error:",
+            error
         );
 
-
         throw new Error(
-            data?.message ||
-            data?.error ||
+            error.message ||
             "Image upload failed."
         );
 
@@ -618,13 +575,32 @@ async function uploadImage(file) {
 
 
     // =============================================
-    // PUBLIC IMAGE URL
+    // PUBLIC URL
     // =============================================
 
-    return (
-        `${SUPABASE_URL}/storage/v1/object/public/` +
-        `${STORAGE_BUCKET}/${storagePath}`
-    );
+    const {
+        data: publicData
+    } =
+        supabase
+            .storage
+            .from(STORAGE_BUCKET)
+            .getPublicUrl(
+                storagePath
+            );
+
+
+    if (
+        !publicData?.publicUrl
+    ) {
+
+        throw new Error(
+            "Image uploaded but public URL could not be created."
+        );
+
+    }
+
+
+    return publicData.publicUrl;
 
 }
 
@@ -635,33 +611,26 @@ async function uploadImage(file) {
 
 function getFileExtension(file) {
 
-    const type =
-        file.type;
-
-
     if (
-        type ===
+        file.type ===
         "image/jpeg"
     ) {
         return "jpg";
     }
 
-
     if (
-        type ===
+        file.type ===
         "image/png"
     ) {
         return "png";
     }
 
-
     if (
-        type ===
+        file.type ===
         "image/webp"
     ) {
         return "webp";
     }
-
 
     return "jpg";
 
