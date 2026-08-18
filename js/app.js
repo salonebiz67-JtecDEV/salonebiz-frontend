@@ -40,14 +40,19 @@ async function initializeApp() {
 
 
     // -------------------------------------------------
-    // Make sure required elements exist
+    // REQUIRED ELEMENTS
     // -------------------------------------------------
 
     const app =
-        document.getElementById("app");
+        document.getElementById(
+            "app"
+        );
+
 
     const bottomNav =
-        document.getElementById("bottomNav");
+        document.getElementById(
+            "bottomNav"
+        );
 
 
     if (!app) {
@@ -61,34 +66,84 @@ async function initializeApp() {
 
 
     // -------------------------------------------------
-    // Restore saved session
+    // INITIAL NAVIGATION STATE
     // -------------------------------------------------
 
-    loadUser();
+    if (bottomNav) {
 
-
-    const user =
-        getUser();
-
-
-    if (user) {
-
-        console.log(
-            "👤 Existing SaloneBiz session found:",
-            user.email || user.name
-        );
-
-    } else {
-
-        console.log(
-            "👤 No active SaloneBiz session."
+        bottomNav.classList.add(
+            "hidden"
         );
 
     }
 
 
     // -------------------------------------------------
-    // Start authentication system
+    // LOAD SAVED USER
+    // -------------------------------------------------
+
+    const user =
+        loadUser();
+
+
+    if (user) {
+
+        console.log(
+            "👤 Saved user found:",
+            user.name || user.email
+        );
+
+    } else {
+
+        console.log(
+            "👤 No saved user."
+        );
+
+    }
+
+
+    // -------------------------------------------------
+    // CHECK API
+    // -------------------------------------------------
+
+    try {
+
+        const health =
+            await checkAPI();
+
+
+        if (
+            health &&
+            (
+                health.success ||
+                health.status === "healthy"
+            )
+        ) {
+
+            console.log(
+                "🟢 SaloneBiz API online."
+            );
+
+        } else {
+
+            console.warn(
+                "🟡 SaloneBiz API is unavailable."
+            );
+
+        }
+
+    } catch (error) {
+
+        console.warn(
+            "🟡 API health check failed:",
+            error
+        );
+
+    }
+
+
+    // -------------------------------------------------
+    // INITIALIZE AUTH
     // -------------------------------------------------
 
     try {
@@ -102,40 +157,22 @@ async function initializeApp() {
             error
         );
 
-        showFatalError(
+
+        showStartupError(
             app,
-            "Unable to start authentication."
+            error
         );
 
-        return;
     }
 
 
     // -------------------------------------------------
-    // Setup global navigation
-    // -------------------------------------------------
-
-    setupNavigation();
-
-
-    // -------------------------------------------------
-    // API health check
-    // -------------------------------------------------
-
-    checkBackend();
-
-
-    // -------------------------------------------------
-    // Global logout listener
+    // LOGOUT EVENT
     // -------------------------------------------------
 
     window.addEventListener(
         "salonebiz:logout",
         () => {
-
-            console.log(
-                "👋 SaloneBiz user logged out."
-            );
 
             logout();
 
@@ -143,139 +180,26 @@ async function initializeApp() {
     );
 
 
-    // -------------------------------------------------
-    // Application ready
-    // -------------------------------------------------
-
-    window.dispatchEvent(
-        new CustomEvent(
-            "salonebiz:ready"
-        )
-    );
-
-
     console.log(
-        "✅ SaloneBiz application ready."
-    );
-}
-
-
-// =====================================================
-// NAVIGATION
-// =====================================================
-
-function setupNavigation() {
-
-    const buttons =
-        document.querySelectorAll(
-            "#bottomNav [data-page]"
-        );
-
-
-    if (!buttons.length) {
-
-        console.warn(
-            "⚠️ No navigation buttons found."
-        );
-
-        return;
-    }
-
-
-    buttons.forEach(
-        button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    const page =
-                        button.dataset.page;
-
-
-                    if (!page) {
-                        return;
-                    }
-
-
-                    console.log(
-                        "📄 Navigation:",
-                        page
-                    );
-
-                }
-            );
-
-        }
+        "✅ SaloneBiz startup complete."
     );
 
 }
 
 
 // =====================================================
-// BACKEND HEALTH
+// STARTUP ERROR SCREEN
 // =====================================================
 
-async function checkBackend() {
-
-    try {
-
-        const result =
-            await checkAPI();
-
-
-        if (
-            result &&
-            (
-                result.success ||
-                result.status === "healthy"
-            )
-        ) {
-
-            console.log(
-                "🟢 SaloneBiz backend online."
-            );
-
-
-            document.body.dataset.api =
-                "online";
-
-        } else {
-
-            console.warn(
-                "🟡 SaloneBiz backend responded but is not healthy."
-            );
-
-
-            document.body.dataset.api =
-                "degraded";
-        }
-
-
-    } catch (error) {
-
-        console.warn(
-            "🔴 SaloneBiz backend unavailable:",
-            error
-        );
-
-
-        document.body.dataset.api =
-            "offline";
-
-    }
-
-}
-
-
-// =====================================================
-// FATAL ERROR SCREEN
-// =====================================================
-
-function showFatalError(
+function showStartupError(
     app,
-    message
+    error
 ) {
+
+    const message =
+        error?.message ||
+        "Unknown application error.";
+
 
     app.innerHTML = `
 
@@ -301,7 +225,7 @@ function showFatalError(
 
                 <div
                     style="
-                        font-size:55px;
+                        font-size:50px;
                         margin-bottom:15px;
                     "
                 >
@@ -315,7 +239,7 @@ function showFatalError(
 
 
                 <h2>
-                    Something went wrong
+                    App couldn't start
                 </h2>
 
 
@@ -327,9 +251,9 @@ function showFatalError(
                 <button
                     class="primary-button"
                     type="button"
-                    onclick="location.reload()"
+                    id="reloadApp"
                 >
-                    Reload app
+                    Reload App
                 </button>
 
             </div>
@@ -338,6 +262,20 @@ function showFatalError(
 
     `;
 
+
+    document
+        .getElementById(
+            "reloadApp"
+        )
+        ?.addEventListener(
+            "click",
+            () => {
+
+                window.location.reload();
+
+            }
+        );
+
 }
 
 
@@ -345,7 +283,9 @@ function showFatalError(
 // HTML ESCAPE
 // =====================================================
 
-function escapeHtml(value) {
+function escapeHtml(
+    value
+) {
 
     return String(
         value ?? ""
