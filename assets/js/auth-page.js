@@ -1,5 +1,7 @@
 import {
-    api
+    login,
+    register,
+    checkAPI
 } from "./api.js";
 
 import {
@@ -12,9 +14,7 @@ import {
 } from "./ui.js";
 
 
-export function renderAuth(
-    app
-) {
+export function renderAuth(app) {
 
     app.innerHTML = `
 
@@ -22,10 +22,7 @@ export function renderAuth(
 
             <div class="auth-grid">
 
-
-                <!-- =====================================
-                     HERO
-                ====================================== -->
+                <!-- HERO -->
 
                 <div class="hero reveal">
 
@@ -50,14 +47,11 @@ export function renderAuth(
                     </div>
 
 
-                    <div
-                        style="margin-top:55px"
-                    >
+                    <div style="margin-top:55px">
 
                         <div class="eyebrow">
                             Welcome to SaloneBiz
                         </div>
-
 
                         <h1>
 
@@ -71,7 +65,6 @@ export function renderAuth(
 
                         </h1>
 
-
                         <p>
 
                             One private workspace
@@ -82,10 +75,7 @@ export function renderAuth(
 
                         </p>
 
-
-                        <ul
-                            class="feature-list"
-                        >
+                        <ul class="feature-list">
 
                             <li>
                                 ✓ Secure authentication
@@ -106,20 +96,13 @@ export function renderAuth(
                 </div>
 
 
-                <!-- =====================================
-                     AUTH CARD
-                ====================================== -->
+                <!-- AUTH CARD -->
 
                 <div
-                    class="auth-card
-                           reveal
-                           delay-2"
+                    class="auth-card reveal delay-2"
                 >
 
                     <div class="auth-inner">
-
-
-                        <!-- Tabs -->
 
                         <div class="tabs">
 
@@ -129,7 +112,6 @@ export function renderAuth(
                             >
                                 Sign in
                             </button>
-
 
                             <button
                                 class="tab"
@@ -141,15 +123,11 @@ export function renderAuth(
                         </div>
 
 
-                        <div
-                            id="form-container"
-                        ></div>
-
+                        <div id="form-container"></div>
 
                     </div>
 
                 </div>
-
 
             </div>
 
@@ -160,10 +138,7 @@ export function renderAuth(
 
     checkHealth();
 
-    setupMode(
-        "login"
-    );
-
+    setupMode("login");
 }
 
 
@@ -178,16 +153,21 @@ async function checkHealth() {
             "#api-status"
         );
 
+    if (!status) {
+        return;
+    }
+
 
     try {
 
         const data =
-            await api.health();
+            await checkAPI();
 
 
         if (
-            data.status ===
-            "healthy"
+            data &&
+            data.success &&
+            data.status === "healthy"
         ) {
 
             status.innerHTML = `
@@ -203,10 +183,14 @@ async function checkHealth() {
             throw new Error(
                 "API not healthy"
             );
-
         }
 
-    } catch {
+    } catch (error) {
+
+        console.error(
+            "API health check failed:",
+            error
+        );
 
         status.innerHTML = `
             <i class="status-dot"></i>
@@ -215,54 +199,53 @@ async function checkHealth() {
 
         status.style.color =
             "#fb7185";
-
     }
-
 }
 
 
 /* =====================================================
-   SWITCH LOGIN / REGISTER
+   LOGIN / REGISTER MODE
 ===================================================== */
 
-function setupMode(
-    mode
-) {
+function setupMode(mode) {
 
     document
-        .querySelectorAll(
-            ".tab"
-        )
-        .forEach(
-            tab => {
+        .querySelectorAll(".tab")
+        .forEach(tab => {
 
-                tab.classList.toggle(
-                    "active",
-                    tab.dataset.mode ===
-                    mode
+            tab.classList.toggle(
+                "active",
+                tab.dataset.mode === mode
+            );
+
+
+            tab.onclick = () => {
+
+                setupMode(
+                    tab.dataset.mode
                 );
 
+            };
 
-                tab.onclick = () => {
-
-                    setupMode(
-                        tab.dataset.mode
-                    );
-
-                };
-
-            }
-        );
+        });
 
 
     const isRegister =
-        mode ===
-        "register";
+        mode === "register";
 
 
-    document.querySelector(
-        "#form-container"
-    ).innerHTML = `
+    const container =
+        document.querySelector(
+            "#form-container"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = `
 
         <h2 class="form-title">
 
@@ -279,9 +262,7 @@ function setupMode(
 
             ${
                 isRegister
-
                     ? "Create your private SaloneBiz workspace."
-
                     : "Sign in to unlock your private workspace."
             }
 
@@ -294,9 +275,7 @@ function setupMode(
                 isRegister
                     ? `
 
-                <div
-                    class="form-group"
-                >
+                <div class="form-group">
 
                     <label>
                         Full name
@@ -313,9 +292,7 @@ function setupMode(
                 </div>
 
 
-                <div
-                    class="form-group"
-                >
+                <div class="form-group">
 
                     <label>
                         Phone
@@ -336,9 +313,7 @@ function setupMode(
             }
 
 
-            <div
-                class="form-group"
-            >
+            <div class="form-group">
 
                 <label>
                     Email
@@ -356,18 +331,13 @@ function setupMode(
             </div>
 
 
-            <div
-                class="form-group"
-            >
+            <div class="form-group">
 
                 <label>
                     Password
                 </label>
 
-
-                <div
-                    class="input-wrap"
-                >
+                <div class="input-wrap">
 
                     <input
                         class="form-input"
@@ -413,9 +383,7 @@ function setupMode(
             </button>
 
 
-            <p
-                class="small-note"
-            >
+            <p class="small-note">
 
                 Your password is sent
                 only to your backend
@@ -428,60 +396,73 @@ function setupMode(
     `;
 
 
-    /* Password visibility */
+    /* =================================================
+       PASSWORD VISIBILITY
+    ================================================= */
 
-    document.querySelector(
-        "#toggle-password"
-    ).onclick = () => {
+    const passwordInput =
+        document.querySelector(
+            "#password"
+        );
 
-        const input =
-            document.querySelector(
-                "#password"
-            );
-
-
-        const button =
-            document.querySelector(
-                "#toggle-password"
-            );
+    const toggleButton =
+        document.querySelector(
+            "#toggle-password"
+        );
 
 
-        if (
-            input.type ===
-            "password"
-        ) {
+    if (
+        passwordInput &&
+        toggleButton
+    ) {
 
-            input.type =
-                "text";
+        toggleButton.onclick = () => {
 
-            button.textContent =
-                "Hide";
+            if (
+                passwordInput.type ===
+                "password"
+            ) {
 
-        } else {
+                passwordInput.type =
+                    "text";
 
-            input.type =
-                "password";
+                toggleButton.textContent =
+                    "Hide";
 
-            button.textContent =
-                "Show";
+            } else {
 
-        }
+                passwordInput.type =
+                    "password";
 
-    };
+                toggleButton.textContent =
+                    "Show";
+            }
+
+        };
+    }
 
 
-    /* Submit */
+    /* =================================================
+       FORM SUBMIT
+    ================================================= */
 
-    document.querySelector(
-        "#auth-form"
-    ).onsubmit = async (
-        event
-    ) => {
+    const form =
+        document.querySelector(
+            "#auth-form"
+        );
+
+
+    if (!form) {
+        return;
+    }
+
+
+    form.onsubmit = async event => {
 
         event.preventDefault();
 
 
-        const form =
+        const formData =
             new FormData(
                 event.currentTarget
             );
@@ -493,38 +474,26 @@ function setupMode(
             );
 
 
-        const payload = {
-
-            email:
-                String(
-                    form.get("email") ||
-                    ""
-                ).trim(),
-
-            password:
-                String(
-                    form.get("password") ||
-                    ""
-                )
-
-        };
+        const email =
+            String(
+                formData.get("email") || ""
+            ).trim();
 
 
-        if (isRegister) {
-
-            payload.name =
-                String(
-                    form.get("name") ||
-                    ""
-                ).trim();
+        const password =
+            String(
+                formData.get("password") || ""
+            );
 
 
-            payload.phone =
-                String(
-                    form.get("phone") ||
-                    ""
-                ).trim();
+        if (!email || !password) {
 
+            showToast(
+                "Email and password are required",
+                "error"
+            );
+
+            return;
         }
 
 
@@ -539,32 +508,116 @@ function setupMode(
 
         try {
 
-            const data =
-                isRegister
+            let data;
 
-                    ? await api.register(
-                        payload
-                    )
 
-                    : await api.login(
-                        payload
+            /* =========================================
+               LOGIN
+            ========================================= */
+
+            if (!isRegister) {
+
+                data =
+                    await login(
+                        email,
+                        password
                     );
+
+            }
+
+
+            /* =========================================
+               REGISTER
+            ========================================= */
+
+            else {
+
+                const name =
+                    String(
+                        formData.get("name") || ""
+                    ).trim();
+
+
+                const phone =
+                    String(
+                        formData.get("phone") || ""
+                    ).trim();
+
+
+                if (!name) {
+
+                    throw new Error(
+                        "Full name is required"
+                    );
+                }
+
+
+                if (!phone) {
+
+                    throw new Error(
+                        "Phone number is required"
+                    );
+                }
+
+
+                data =
+                    await register(
+                        name,
+                        email,
+                        password,
+                        phone
+                    );
+            }
+
+
+            /* =========================================
+               CHECK RESPONSE
+            ========================================= */
+
+            if (
+                !data ||
+                !data.success
+            ) {
+
+                throw new Error(
+                    data?.message ||
+                    "Authentication failed"
+                );
+            }
+
+
+            /*
+             * Some backends return the token
+             * separately from the user.
+             *
+             * Put the token inside the user
+             * object so auth.js and api.js
+             * can use the same session.
+             */
+
+            const user = {
+                ...(data.user || {})
+            };
+
+
+            if (data.token) {
+
+                user.token =
+                    data.token;
+            }
 
 
             if (
-                !data.user
+                !user.id
             ) {
 
                 throw new Error(
                     "Authentication succeeded but no user was returned."
                 );
-
             }
 
 
-            setUser(
-                data.user
-            );
+            setUser(user);
 
 
             showToast(
@@ -582,9 +635,13 @@ function setupMode(
             );
 
 
-        } catch (
-            error
-        ) {
+        } catch (error) {
+
+            console.error(
+                "Authentication error:",
+                error
+            );
+
 
             showToast(
                 error.message ||
@@ -597,8 +654,6 @@ function setupMode(
                 button,
                 false
             );
-
         }
-
     };
 }
