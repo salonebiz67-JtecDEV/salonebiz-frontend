@@ -1,4 +1,8 @@
-Import {
+// =====================================================
+// 🇸🇱 SALONEBIZ HOME PAGE
+// =====================================================
+
+import {
     getFeed,
     likePost,
     unlikePost,
@@ -13,6 +17,11 @@ Import {
 // =====================================================
 
 export async function renderHome(app) {
+
+    if (!app) {
+        console.error("❌ Home: app element not found.");
+        return;
+    }
 
     app.innerHTML = `
 
@@ -40,7 +49,6 @@ export async function renderHome(app) {
 
             </header>
 
-
             <main class="container">
 
                 <h1 class="page-title">
@@ -51,10 +59,15 @@ export async function renderHome(app) {
                     Discover businesses around Sierra Leone.
                 </p>
 
-
                 <div id="feed">
 
-                    <div class="container">
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:center;
+                            padding:40px;
+                        "
+                    >
                         <div class="loader"></div>
                     </div>
 
@@ -65,20 +78,20 @@ export async function renderHome(app) {
         </div>
     `;
 
+    const feed = document.getElementById("feed");
 
-    const feed =
-        document.getElementById("feed");
+    if (!feed) {
+        console.error("❌ Home: #feed not found.");
+        return;
+    }
 
+    setupSearch();
 
     try {
 
-        const result =
-            await getFeed(1, 20);
+        const result = await getFeed(1, 20);
 
-
-        /*
-         * Support several possible backend response formats.
-         */
+        console.log("🇸🇱 Feed response:", result);
 
         const posts =
             Array.isArray(result?.posts)
@@ -87,8 +100,9 @@ export async function renderHome(app) {
                     ? result.data
                     : Array.isArray(result?.feed)
                         ? result.feed
-                        : [];
-
+                        : Array.isArray(result)
+                            ? result
+                            : [];
 
         if (posts.length === 0) {
 
@@ -102,9 +116,7 @@ export async function renderHome(app) {
                     "
                 >
 
-                    <div
-                        style="font-size:45px;"
-                    >
+                    <div style="font-size:45px;">
                         🏪
                     </div>
 
@@ -121,29 +133,16 @@ export async function renderHome(app) {
 
             `;
 
-            setupSearch();
-
             return;
         }
 
-
-        feed.innerHTML =
-            posts
-                .map(post => createPost(post))
-                .join("");
-
-
-        /*
-         * Load interaction information after
-         * the posts have been rendered.
-         */
+        feed.innerHTML = posts
+            .map(post => createPost(post))
+            .join("");
 
         await loadInteractionStates(posts);
 
         attachPostEvents();
-
-        setupSearch();
-
 
     } catch (error) {
 
@@ -151,7 +150,6 @@ export async function renderHome(app) {
             "❌ Failed to load SaloneBiz feed:",
             error
         );
-
 
         feed.innerHTML = `
 
@@ -163,9 +161,7 @@ export async function renderHome(app) {
                 "
             >
 
-                <div
-                    style="font-size:45px;"
-                >
+                <div style="font-size:45px;">
                     ⚠️
                 </div>
 
@@ -189,9 +185,7 @@ export async function renderHome(app) {
                 </button>
 
             </div>
-
         `;
-
 
         document
             .getElementById("retryFeed")
@@ -199,68 +193,56 @@ export async function renderHome(app) {
                 "click",
                 () => renderHome(app)
             );
-
-
-        setupSearch();
-
     }
-
 }
 
 
 // =====================================================
-// CREATE POST HTML
+// CREATE POST
 // =====================================================
 
-function createPost(post) {
+function createPost(post = {}) {
 
     const postId =
-        post?.id ||
-        post?.post_id ||
+        post.id ||
+        post.post_id ||
         "";
-
 
     const userName =
-        post?.user_name ||
-        post?.name ||
-        post?.business_name ||
+        post.user_name ||
+        post.name ||
+        post.business_name ||
         "SaloneBiz User";
 
-
     const userEmail =
-        post?.user_email ||
-        post?.email ||
+        post.user_email ||
+        post.email ||
         "Sierra Leone";
 
-
     const caption =
-        post?.caption ||
-        post?.description ||
+        post.caption ||
+        post.description ||
         "";
-
 
     const image =
-        post?.image_url ||
-        post?.imageUrl ||
-        post?.image ||
+        post.image_url ||
+        post.imageUrl ||
+        post.image ||
         "";
-
 
     const initialLikes =
         Number(
-            post?.likes ??
-            post?.like_count ??
+            post.likes ??
+            post.like_count ??
             0
         );
-
 
     const initialComments =
         Number(
-            post?.comments ??
-            post?.comment_count ??
+            post.comments ??
+            post.comment_count ??
             0
         );
-
 
     return `
 
@@ -275,20 +257,17 @@ function createPost(post) {
                     👤
                 </div>
 
-
                 <div class="business-info">
 
                     <div class="business-name">
                         ${escapeHtml(userName)}
                     </div>
 
-
                     <div class="business-location">
                         ${escapeHtml(userEmail)}
                     </div>
 
                 </div>
-
 
                 <button
                     class="header-action"
@@ -299,7 +278,6 @@ function createPost(post) {
                 </button>
 
             </div>
-
 
             ${
                 image
@@ -318,9 +296,7 @@ function createPost(post) {
                     : ""
             }
 
-
             <div class="post-content">
-
 
                 ${
                     caption
@@ -332,7 +308,6 @@ function createPost(post) {
                         : ""
                 }
 
-
                 <div class="post-actions">
 
                     <button
@@ -342,12 +317,15 @@ function createPost(post) {
                     >
                         ❤️
                         <span class="like-count">
-                            ${Number.isFinite(initialLikes)
-                                ? initialLikes
-                                : 0}
+                            ${
+                                Number.isFinite(
+                                    initialLikes
+                                )
+                                    ? initialLikes
+                                    : 0
+                            }
                         </span>
                     </button>
-
 
                     <button
                         class="post-action comment-button"
@@ -356,13 +334,14 @@ function createPost(post) {
                         💬
                         <span>
                             ${
-                                Number.isFinite(initialComments)
+                                Number.isFinite(
+                                    initialComments
+                                )
                                     ? initialComments
                                     : 0
                             }
                         </span>
                     </button>
-
 
                     <button
                         class="post-action share-button"
@@ -370,7 +349,6 @@ function createPost(post) {
                     >
                         ↗️
                     </button>
-
 
                     <button
                         class="post-action favorite-button"
@@ -385,151 +363,126 @@ function createPost(post) {
             </div>
 
         </article>
-
     `;
 }
 
 
 // =====================================================
-// LOAD LIKE / FAVORITE STATE
+// LOAD INTERACTION STATES
 // =====================================================
 
 async function loadInteractionStates(posts) {
 
     await Promise.all(
+        posts.map(async post => {
 
-        posts.map(
-            async post => {
+            const postId =
+                post?.id ||
+                post?.post_id;
 
-                const postId =
-                    post?.id ||
-                    post?.post_id;
+            if (!postId) {
+                return;
+            }
 
+            try {
 
-                if (!postId) {
+                const result =
+                    await getInteractionStatus(
+                        postId
+                    );
+
+                const article =
+                    document.querySelector(
+                        `.post[data-post-id="${CSS.escape(
+                            String(postId)
+                        )}"]`
+                    );
+
+                if (!article) {
                     return;
                 }
 
-
-                try {
-
-                    const result =
-                        await getInteractionStatus(
-                            postId
-                        );
-
-
-                    const article =
-                        document.querySelector(
-                            `.post[data-post-id="${CSS.escape(String(postId))}"]`
-                        );
-
-
-                    if (!article) {
-                        return;
-                    }
-
-
-                    const likeButton =
-                        article.querySelector(
-                            ".like-button"
-                        );
-
-
-                    const favoriteButton =
-                        article.querySelector(
-                            ".favorite-button"
-                        );
-
-
-                    const likeCount =
-                        article.querySelector(
-                            ".like-count"
-                        );
-
-
-                    if (!likeButton || !favoriteButton) {
-                        return;
-                    }
-
-
-                    const liked =
-                        Boolean(
-                            result?.liked ??
-                            result?.isLiked ??
-                            result?.like ??
-                            false
-                        );
-
-
-                    const favorited =
-                        Boolean(
-                            result?.favorited ??
-                            result?.isFavorited ??
-                            result?.favorite ??
-                            false
-                        );
-
-
-                    const count =
-                        Number(
-                            result?.likes ??
-                            result?.likeCount ??
-                            result?.like_count ??
-                            post?.likes ??
-                            post?.like_count ??
-                            0
-                        );
-
-
-                    likeButton.dataset.liked =
-                        String(liked);
-
-
-                    favoriteButton.dataset.favorited =
-                        String(favorited);
-
-
-                    likeButton.classList.toggle(
-                        "liked",
-                        liked
+                const likeButton =
+                    article.querySelector(
+                        ".like-button"
                     );
 
-
-                    favoriteButton.classList.toggle(
-                        "favorited",
-                        favorited
+                const favoriteButton =
+                    article.querySelector(
+                        ".favorite-button"
                     );
 
-
-                    if (likeCount) {
-
-                        likeCount.textContent =
-                            Number.isFinite(count)
-                                ? count
-                                : 0;
-
-                    }
-
-                } catch (error) {
-
-                    /*
-                     * Interaction status should never
-                     * prevent the feed itself from loading.
-                     */
-
-                    console.warn(
-                        `Interaction state unavailable for post ${postId}:`,
-                        error
+                const likeCount =
+                    article.querySelector(
+                        ".like-count"
                     );
+
+                if (!likeButton || !favoriteButton) {
+                    return;
+                }
+
+                const liked =
+                    Boolean(
+                        result?.liked ??
+                        result?.isLiked ??
+                        result?.like ??
+                        false
+                    );
+
+                const favorited =
+                    Boolean(
+                        result?.favorited ??
+                        result?.isFavorited ??
+                        result?.favorite ??
+                        false
+                    );
+
+                const count =
+                    Number(
+                        result?.likes ??
+                        result?.likeCount ??
+                        result?.like_count ??
+                        post?.likes ??
+                        post?.like_count ??
+                        0
+                    );
+
+                likeButton.dataset.liked =
+                    String(liked);
+
+                favoriteButton.dataset.favorited =
+                    String(favorited);
+
+                likeButton.classList.toggle(
+                    "liked",
+                    liked
+                );
+
+                favoriteButton.classList.toggle(
+                    "favorited",
+                    favorited
+                );
+
+                if (likeCount) {
+
+                    likeCount.textContent =
+                        Number.isFinite(count)
+                            ? count
+                            : 0;
 
                 }
 
+            } catch (error) {
+
+                console.warn(
+                    `⚠️ Interaction state unavailable for post ${postId}:`,
+                    error
+                );
+
             }
-        )
 
+        })
     );
-
 }
 
 
@@ -538,7 +491,6 @@ async function loadInteractionStates(posts) {
 // =====================================================
 
 function attachPostEvents() {
-
 
     // -------------------------------------------------
     // LIKE
@@ -555,35 +507,28 @@ function attachPostEvents() {
                     const article =
                         button.closest(".post");
 
-
                     const postId =
                         article?.dataset.postId;
-
 
                     if (!postId) {
                         return;
                     }
 
-
                     const liked =
                         button.dataset.liked ===
                         "true";
-
 
                     const count =
                         article.querySelector(
                             ".like-count"
                         );
 
-
                     const oldCount =
                         Number(
                             count?.textContent
                         ) || 0;
 
-
                     button.disabled = true;
-
 
                     try {
 
@@ -601,20 +546,16 @@ function attachPostEvents() {
 
                         }
 
-
                         const newLiked =
                             !liked;
 
-
                         button.dataset.liked =
                             String(newLiked);
-
 
                         button.classList.toggle(
                             "liked",
                             newLiked
                         );
-
 
                         if (count) {
 
@@ -638,7 +579,6 @@ function attachPostEvents() {
                             error
                         );
 
-
                         alert(
                             error?.message ||
                             "Unable to update like."
@@ -646,14 +586,11 @@ function attachPostEvents() {
 
                     } finally {
 
-                        button.disabled =
-                            false;
+                        button.disabled = false;
 
                     }
-
                 }
             );
-
         });
 
 
@@ -672,23 +609,18 @@ function attachPostEvents() {
                     const article =
                         button.closest(".post");
 
-
                     const postId =
                         article?.dataset.postId;
-
 
                     if (!postId) {
                         return;
                     }
 
-
                     const favorited =
                         button.dataset.favorited ===
                         "true";
 
-
                     button.disabled = true;
-
 
                     try {
 
@@ -706,14 +638,11 @@ function attachPostEvents() {
 
                         }
 
-
                         const newState =
                             !favorited;
 
-
                         button.dataset.favorited =
                             String(newState);
-
 
                         button.classList.toggle(
                             "favorited",
@@ -727,7 +656,6 @@ function attachPostEvents() {
                             error
                         );
 
-
                         alert(
                             error?.message ||
                             "Unable to update favorite."
@@ -735,14 +663,11 @@ function attachPostEvents() {
 
                     } finally {
 
-                        button.disabled =
-                            false;
+                        button.disabled = false;
 
                     }
-
                 }
             );
-
         });
 
 
@@ -761,7 +686,6 @@ function attachPostEvents() {
                     const article =
                         button.closest(".post");
 
-
                     const business =
                         article
                             ?.querySelector(
@@ -771,11 +695,9 @@ function attachPostEvents() {
                             ?.trim() ||
                         "SaloneBiz";
 
-
                     const shareData = {
 
-                        title:
-                            business,
+                        title: business,
 
                         text:
                             `Check out ${business} on SaloneBiz`,
@@ -785,12 +707,9 @@ function attachPostEvents() {
 
                     };
 
-
                     try {
 
-                        if (
-                            navigator.share
-                        ) {
+                        if (navigator.share) {
 
                             await navigator.share(
                                 shareData
@@ -803,7 +722,6 @@ function attachPostEvents() {
                             await navigator.clipboard.writeText(
                                 window.location.href
                             );
-
 
                             alert(
                                 "SaloneBiz link copied!"
@@ -832,10 +750,8 @@ function attachPostEvents() {
                         }
 
                     }
-
                 }
             );
-
         });
 
 
@@ -851,31 +767,59 @@ function attachPostEvents() {
                 "click",
                 () => {
 
-                    const article =
-                        button.closest(".post");
-
-
-                    const postId =
-                        article?.dataset.postId;
-
-
-                    if (!postId) {
-                        return;
-                    }
-
-
                     alert(
                         "Comments page will be connected next."
                     );
 
                 }
             );
-
         });
-
 }
 
 
 // =====================================================
-// SEARCH
-// =======
+// SEARCH BUTTON
+// =====================================================
+
+function setupSearch() {
+
+    const button =
+        document.getElementById(
+            "searchButton"
+        );
+
+    if (!button) {
+        return;
+    }
+
+    button.onclick = () => {
+
+        if (
+            typeof window.navigate ===
+            "function"
+        ) {
+
+            window.navigate("search");
+
+            return;
+        }
+
+        window.location.hash =
+            "#search";
+    };
+}
+
+
+// =====================================================
+// HTML ESCAPE
+// =====================================================
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
