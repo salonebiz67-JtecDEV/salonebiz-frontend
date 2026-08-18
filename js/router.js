@@ -4,57 +4,38 @@
 // =====================================================
 
 // =====================================================
-// PAGE IMPORTS
-// =====================================================
-
-import {
-    renderHome
-} from "./pages/home.js";
-
-import {
-    renderFriends
-} from "./pages/friends.js";
-
-import {
-    renderCreate
-} from "./pages/create.js";
-
-import {
-    renderProfile
-} from "./pages/profile.js";
-
-import {
-    renderSearch
-} from "./pages/search.js";
-
-import {
-    renderInbox
-} from "./pages/inbox.js";
-
-import {
-    renderSettings
-} from "./pages/settings.js";
-
-
-// =====================================================
-// ROUTE TABLE
+// PAGE LOADERS
 // =====================================================
 
 const routes = {
 
-    home: renderHome,
+    home: () =>
+        import("./pages/home.js")
+            .then(module => module.renderHome),
 
-    friends: renderFriends,
+    friends: () =>
+        import("./pages/friends.js")
+            .then(module => module.renderFriends),
 
-    create: renderCreate,
+    create: () =>
+        import("./pages/create.js")
+            .then(module => module.renderCreate),
 
-    profile: renderProfile,
+    profile: () =>
+        import("./pages/profile.js")
+            .then(module => module.renderProfile),
 
-    search: renderSearch,
+    search: () =>
+        import("./pages/search.js")
+            .then(module => module.renderSearch),
 
-    inbox: renderInbox,
+    inbox: () =>
+        import("./pages/inbox.js")
+            .then(module => module.renderInbox),
 
-    settings: renderSettings
+    settings: () =>
+        import("./pages/settings.js")
+            .then(module => module.renderSettings)
 
 };
 
@@ -63,17 +44,11 @@ const routes = {
 // NAVIGATE
 // =====================================================
 
-export async function navigate(
-    page = "home"
-) {
+export async function navigate(page = "home") {
 
     const app =
         document.getElementById("app");
 
-
-    // -------------------------------------------------
-    // APP CONTAINER CHECK
-    // -------------------------------------------------
 
     if (!app) {
 
@@ -86,19 +61,11 @@ export async function navigate(
     }
 
 
-    // -------------------------------------------------
-    // FIND PAGE
-    // -------------------------------------------------
-
-    const renderer =
+    const loader =
         routes[page];
 
 
-    // -------------------------------------------------
-    // UNKNOWN PAGE
-    // -------------------------------------------------
-
-    if (!renderer) {
+    if (!loader) {
 
         console.warn(
             `⚠️ Unknown page "${page}". Loading home.`
@@ -109,16 +76,12 @@ export async function navigate(
     }
 
 
-    // -------------------------------------------------
-    // UPDATE NAVIGATION
-    // -------------------------------------------------
-
     updateNavigation(page);
 
 
-    // -------------------------------------------------
-    // LOADING SCREEN
-    // -------------------------------------------------
+    // =================================================
+    // LOADING
+    // =================================================
 
     app.innerHTML = `
 
@@ -135,6 +98,7 @@ export async function navigate(
 
                     <div style="
                         text-align:center;
+                        padding:30px;
                     ">
 
                         <div
@@ -164,10 +128,6 @@ export async function navigate(
     `;
 
 
-    // -------------------------------------------------
-    // RENDER PAGE
-    // -------------------------------------------------
-
     try {
 
         console.log(
@@ -175,6 +135,25 @@ export async function navigate(
         );
 
 
+        // Load the page module
+        const renderer =
+            await loader();
+
+
+        // Make sure export exists
+        if (
+            typeof renderer !==
+            "function"
+        ) {
+
+            throw new Error(
+                `Page "${page}" does not export the required render function.`
+            );
+
+        }
+
+
+        // Render page
         await renderer(app);
 
 
@@ -183,17 +162,13 @@ export async function navigate(
         );
 
 
-        // -------------------------------------------------
-        // SAVE CURRENT PAGE
-        // -------------------------------------------------
-
         window.SaloneBizCurrentPage =
             page;
 
 
-        // -------------------------------------------------
-        // UPDATE URL
-        // -------------------------------------------------
+        // =================================================
+        // URL
+        // =================================================
 
         try {
 
@@ -206,9 +181,7 @@ export async function navigate(
             ) {
 
                 history.replaceState(
-                    {
-                        page
-                    },
+                    { page },
                     "",
                     newUrl
                 );
@@ -218,7 +191,7 @@ export async function navigate(
         } catch (error) {
 
             console.warn(
-                "⚠️ Could not update URL:",
+                "⚠️ URL update failed:",
                 error
             );
 
@@ -228,7 +201,7 @@ export async function navigate(
     } catch (error) {
 
         console.error(
-            `❌ Failed to render "${page}":`,
+            `❌ Failed to load page "${page}":`,
             error
         );
 
@@ -242,35 +215,34 @@ export async function navigate(
                     <div
                         class="create-box"
                         style="
-                            margin-top:30px;
+                            margin:30px 16px;
                             text-align:center;
                         "
                     >
 
-                        <div
-                            style="
-                                font-size:50px;
-                                margin-bottom:15px;
-                            "
-                        >
+                        <div style="
+                            font-size:50px;
+                            margin-bottom:15px;
+                        ">
                             ⚠️
                         </div>
 
 
                         <h2>
-                            Something went wrong
+                            Page failed to load
                         </h2>
 
 
                         <p
                             class="text-muted"
                             style="
-                                margin-top:10px;
+                                margin-top:12px;
+                                line-height:1.6;
                             "
                         >
                             ${escapeHtml(
                                 error?.message ||
-                                "Unable to load this page."
+                                "Unknown error"
                             )}
                         </p>
 
@@ -279,8 +251,26 @@ export async function navigate(
                             class="primary-button"
                             id="routerRetry"
                             type="button"
+                            style="
+                                margin-top:20px;
+                            "
                         >
-                            Try again
+                            Try Again
+                        </button>
+
+
+                        <button
+                            id="routerHome"
+                            type="button"
+                            style="
+                                margin-top:10px;
+                                background:none;
+                                border:none;
+                                color:inherit;
+                                text-decoration:underline;
+                            "
+                        >
+                            Back to Home
                         </button>
 
                     </div>
@@ -299,6 +289,16 @@ export async function navigate(
             ?.addEventListener(
                 "click",
                 () => navigate(page)
+            );
+
+
+        document
+            .getElementById(
+                "routerHome"
+            )
+            ?.addEventListener(
+                "click",
+                () => navigate("home")
             );
 
     }
@@ -335,7 +335,7 @@ function updateNavigation(
 
 
 // =====================================================
-// HASH NAVIGATION
+// HASH ROUTING
 // =====================================================
 
 export function setupRouter() {
@@ -346,10 +346,7 @@ export function setupRouter() {
 
             const page =
                 window.location.hash
-                    .replace(
-                        "#",
-                        ""
-                    )
+                    .replace("#", "")
                     .trim();
 
 
@@ -366,16 +363,9 @@ export function setupRouter() {
     );
 
 
-    // -------------------------------------------------
-    // INITIAL PAGE
-    // -------------------------------------------------
-
     const initialPage =
         window.location.hash
-            .replace(
-                "#",
-                ""
-            )
+            .replace("#", "")
             .trim();
 
 
@@ -399,31 +389,14 @@ export function setupRouter() {
 // ESCAPE HTML
 // =====================================================
 
-function escapeHtml(
-    value
-) {
+function escapeHtml(value) {
 
     return String(value ?? "")
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
 
@@ -448,8 +421,6 @@ export function getCurrentPage() {
 
 export function getRoutes() {
 
-    return Object.keys(
-        routes
-    );
+    return Object.keys(routes);
 
 }
