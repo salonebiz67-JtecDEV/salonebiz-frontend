@@ -3,7 +3,8 @@
 // =====================================================
 
 import {
-    login as apiLogin
+    login as apiLogin,
+    logout as apiLogout
 } from "./api.js";
 
 import {
@@ -47,23 +48,21 @@ export function initializeAuth() {
 function showLogin() {
 
     const app =
-        document.getElementById(
-            "app"
-        );
+        document.getElementById("app");
 
 
     if (!app) {
+
         console.error(
             "❌ #app element not found"
         );
+
         return;
     }
 
 
     const bottomNav =
-        document.getElementById(
-            "bottomNav"
-        );
+        document.getElementById("bottomNav");
 
 
     if (bottomNav) {
@@ -81,12 +80,14 @@ function showLogin() {
 
             <main class="container">
 
-                <div style="
-                    min-height:100vh;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                ">
+                <div
+                    style="
+                        min-height:100vh;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                    "
+                >
 
                     <div
                         class="create-box"
@@ -101,9 +102,7 @@ function showLogin() {
                         >
 
                             <div
-                                style="
-                                    font-size:50px;
-                                "
+                                style="font-size:50px;"
                             >
                                 🇸🇱
                             </div>
@@ -113,7 +112,8 @@ function showLogin() {
                             </h1>
 
                             <p class="text-muted">
-                                Your business. Your workspace.
+                                Your business.
+                                Your workspace.
                             </p>
 
                         </div>
@@ -241,10 +241,23 @@ async function performLogin() {
     // VALIDATION
     // =================================================
 
-    if (!email || !password) {
+    if (!email) {
 
         error.textContent =
-            "Enter your email and password.";
+            "Enter your email.";
+
+        emailInput.focus();
+
+        return;
+    }
+
+
+    if (!password) {
+
+        error.textContent =
+            "Enter your password.";
+
+        passwordInput.focus();
 
         return;
     }
@@ -255,13 +268,12 @@ async function performLogin() {
     button.textContent =
         "Signing in...";
 
-
     error.textContent =
         "";
 
 
     // =================================================
-    // API LOGIN
+    // LOGIN REQUEST
     // =================================================
 
     try {
@@ -287,67 +299,86 @@ async function performLogin() {
 
 
         // =================================================
-        // USER CHECK
+        // VERIFY USER
         // =================================================
 
         if (!result.user) {
 
             throw new Error(
-                "Login succeeded but the server did not return a user."
+                "Login succeeded, but the server did not return your account."
             );
 
         }
 
 
-        /*
-         * api.js already stores the JWT.
-         *
-         * Here we also keep the complete session
-         * inside state.js.
-         */
+        // =================================================
+        // SAVE SESSION
+        // =================================================
 
         const user = {
-            ...result.user
+
+            ...result.user,
+
+            ...(result.token
+                ? {
+                    token:
+                        result.token
+                }
+                : {})
+
         };
 
 
-        if (result.token) {
-
-            user.token =
-                result.token;
-
-        }
-
-
-        setUser(
-            user
-        );
+        setUser(user);
 
 
         // =================================================
-        // OPEN APP
+        // OPEN APPLICATION
         // =================================================
 
         showApp();
 
 
-    } catch (err) {
+    } catch (error) {
 
         console.error(
             "❌ Login error:",
-            err
+            error
         );
 
 
-        error.textContent =
-            err.message ||
-            "Login failed.";
+        errorMessage(
+            error.message ||
+            "Unable to sign in."
+        );
 
 
         button.disabled = false;
 
         button.textContent =
             "Sign in";
+
+    }
+
+}
+
+
+// =====================================================
+// ERROR DISPLAY
+// =====================================================
+
+function errorMessage(message) {
+
+    const error =
+        document.getElementById(
+            "loginError"
+        );
+
+
+    if (error) {
+
+        error.textContent =
+            message;
 
     }
 
@@ -378,20 +409,9 @@ function showApp() {
     setupNavigation();
 
 
-    try {
-
-        navigate(
-            "home"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "❌ Navigation error:",
-            error
-        );
-
-    }
+    navigate(
+        "home"
+    );
 
 }
 
@@ -402,15 +422,15 @@ function showApp() {
 
 export function logout() {
 
+    // Clear API token
+    apiLogout();
+
+
+    // Clear frontend state
     clearUser();
 
 
-    // Also remove JWT
-    localStorage.removeItem(
-        "salonebiz_token"
-    );
-
-
+    // Hide navigation
     const nav =
         document.getElementById(
             "bottomNav"
@@ -426,6 +446,7 @@ export function logout() {
     }
 
 
+    // Return to login
     showLogin();
 
 }
@@ -457,20 +478,7 @@ function setupNavigation() {
                 }
 
 
-                try {
-
-                    navigate(
-                        page
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "❌ Navigation error:",
-                        error
-                    );
-
-                }
+                navigate(page);
 
             };
 
