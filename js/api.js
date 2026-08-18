@@ -2,50 +2,9 @@ const API_BASE =
     "https://salonebiz-backend.onrender.com";
 
 
-/* =====================================================
-   CORE API REQUEST
-===================================================== */
-
-async function apiRequest(endpoint, options = {}) {
-
-    const response = await fetch(
-        `${API_BASE}${endpoint}`,
-        {
-            ...options,
-
-            headers: {
-                "Content-Type": "application/json",
-                ...(options.headers || {})
-            }
-        }
-    );
-
-    let data;
-
-    try {
-        data = await response.json();
-    } catch {
-        data = {
-            success: false,
-            message: "Invalid server response"
-        };
-    }
-
-    if (!response.ok) {
-
-        throw new Error(
-            data.message ||
-            `Request failed: ${response.status}`
-        );
-    }
-
-    return data;
-}
-
-
-/* =====================================================
-   SESSION STORAGE
-===================================================== */
+// =====================================================
+// SESSION
+// =====================================================
 
 const SESSION_KEY = "salonebiz_user";
 
@@ -93,18 +52,100 @@ export function logout() {
 }
 
 
-/* =====================================================
-   API HEALTH
-===================================================== */
+export function getCurrentUser() {
+
+    return getSession();
+}
+
+
+// =====================================================
+// CORE API REQUEST
+// =====================================================
+
+async function apiRequest(
+    endpoint,
+    options = {}
+) {
+
+    const headers = {
+        ...(options.headers || {})
+    };
+
+    /*
+       Only add JSON content type when
+       sending a normal JSON body.
+    */
+
+    if (
+        options.body &&
+        !(options.body instanceof FormData)
+    ) {
+        headers["Content-Type"] =
+            "application/json";
+    }
+
+
+    /*
+       Add JWT automatically when logged in.
+    */
+
+    const user = getSession();
+
+    if (user && user.token) {
+
+        headers["Authorization"] =
+            `Bearer ${user.token}`;
+    }
+
+
+    const response = await fetch(
+        `${API_BASE}${endpoint}`,
+        {
+            ...options,
+            headers
+        }
+    );
+
+
+    let data;
+
+    try {
+
+        data = await response.json();
+
+    } catch {
+
+        data = {
+            success: false,
+            message: "Invalid server response"
+        };
+    }
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.message ||
+            `Request failed: ${response.status}`
+        );
+    }
+
+
+    return data;
+}
+
+
+// =====================================================
+// API HEALTH
+// =====================================================
 
 export async function checkAPI() {
 
     try {
 
-        const result =
-            await apiRequest("/api/health");
-
-        return result;
+        return await apiRequest(
+            "/api/health"
+        );
 
     } catch (error) {
 
@@ -122,9 +163,9 @@ export async function checkAPI() {
 }
 
 
-/* =====================================================
-   LOGIN
-===================================================== */
+// =====================================================
+// AUTH
+// =====================================================
 
 export async function login(
     email,
@@ -144,27 +185,24 @@ export async function login(
             }
         );
 
-    /*
-       Save ONLY the returned user information.
-
-       Never save the user's password.
-    */
 
     if (
         result.success &&
         result.user
     ) {
 
+        /*
+           Keep the token if the backend
+           provides one.
+        */
+
         saveSession(result.user);
     }
+
 
     return result;
 }
 
-
-/* =====================================================
-   REGISTER
-===================================================== */
 
 export async function register(
     name,
@@ -173,38 +211,25 @@ export async function register(
     phone
 ) {
 
-    const result =
-        await apiRequest(
-            "/api/auth/register",
-            {
-                method: "POST",
+    return apiRequest(
+        "/api/auth/register",
+        {
+            method: "POST",
 
-                body: JSON.stringify({
-                    name,
-                    email,
-                    password,
-                    phone
-                })
-            }
-        );
-
-    return result;
+            body: JSON.stringify({
+                name,
+                email,
+                password,
+                phone
+            })
+        }
+    );
 }
 
 
-/* =====================================================
-   CURRENT USER
-===================================================== */
-
-export function getCurrentUser() {
-
-    return getSession();
-}
-
-
-/* =====================================================
-   GENERIC GET
-===================================================== */
+// =====================================================
+// GENERIC REQUESTS
+// =====================================================
 
 export async function apiGet(
     endpoint
@@ -219,10 +244,6 @@ export async function apiGet(
 }
 
 
-/* =====================================================
-   GENERIC POST
-===================================================== */
-
 export async function apiPost(
     endpoint,
     body = {}
@@ -232,16 +253,11 @@ export async function apiPost(
         endpoint,
         {
             method: "POST",
-
             body: JSON.stringify(body)
         }
     );
 }
 
-
-/* =====================================================
-   GENERIC PUT
-===================================================== */
 
 export async function apiPut(
     endpoint,
@@ -252,16 +268,26 @@ export async function apiPut(
         endpoint,
         {
             method: "PUT",
-
             body: JSON.stringify(body)
         }
     );
 }
 
 
-/* =====================================================
-   GENERIC DELETE
-===================================================== */
+export async function apiPatch(
+    endpoint,
+    body = {}
+) {
+
+    return apiRequest(
+        endpoint,
+        {
+            method: "PATCH",
+            body: JSON.stringify(body)
+        }
+    );
+}
+
 
 export async function apiDelete(
     endpoint
@@ -276,9 +302,200 @@ export async function apiDelete(
 }
 
 
-/* =====================================================
-   API BASE URL
-===================================================== */
+// =====================================================
+// POSTS
+// =====================================================
+
+export async function getFeed(
+    page = 1,
+    limit = 20
+) {
+
+    return apiGet(
+        `/api/posts/feed?page=${page}&limit=${limit}`
+    );
+}
+
+
+export async function getPost(
+    postId
+) {
+
+    return apiGet(
+        `/api/posts/${postId}`
+    );
+}
+
+
+export async function createPost(
+    image_url,
+    caption = ""
+) {
+
+    return apiPost(
+        "/api/posts",
+        {
+            image_url,
+            caption
+        }
+    );
+}
+
+
+export async function deletePost(
+    postId
+) {
+
+    return apiDelete(
+        `/api/posts/${postId}`
+    );
+}
+
+
+// =====================================================
+// USERS / PROFILE / SEARCH
+// =====================================================
+
+export async function getMyProfile() {
+
+    return apiGet(
+        "/api/users/me"
+    );
+}
+
+
+export async function getUserProfile(
+    userId
+) {
+
+    return apiGet(
+        `/api/users/${userId}`
+    );
+}
+
+
+// =====================================================
+// FRIENDS / FOLLOW
+// =====================================================
+
+export async function followUser(
+    userId
+) {
+
+    return apiPost(
+        `/api/friends/${userId}/follow`
+    );
+}
+
+
+export async function unfollowUser(
+    userId
+) {
+
+    return apiDelete(
+        `/api/friends/${userId}/follow`
+    );
+}
+
+
+// =====================================================
+// POST INTERACTIONS
+// =====================================================
+
+export async function toggleLike(
+    postId
+) {
+
+    return apiPost(
+        `/api/interactions/posts/${postId}/like`
+    );
+}
+
+
+export async function toggleFavorite(
+    postId
+) {
+
+    return apiPost(
+        `/api/interactions/posts/${postId}/favorite`
+    );
+}
+
+
+export async function getInteractionStatus(
+    postId
+) {
+
+    return apiGet(
+        `/api/interactions/posts/${postId}`
+    );
+}
+
+
+export async function addComment(
+    postId,
+    text
+) {
+
+    return apiPost(
+        `/api/interactions/posts/${postId}/comments`,
+        {
+            text
+        }
+    );
+}
+
+
+export async function getComments(
+    postId
+) {
+
+    return apiGet(
+        `/api/interactions/posts/${postId}/comments`
+    );
+}
+
+
+// =====================================================
+// MESSAGES
+// =====================================================
+
+export async function sendMessage(
+    receiver_id,
+    content
+) {
+
+    return apiPost(
+        "/api/messages",
+        {
+            receiver_id,
+            content
+        }
+    );
+}
+
+
+export async function getMessages() {
+
+    return apiGet(
+        "/api/messages"
+    );
+}
+
+
+export async function markMessageRead(
+    messageId
+) {
+
+    return apiPatch(
+        `/api/messages/${messageId}/read`
+    );
+}
+
+
+// =====================================================
+// API BASE URL
+// =====================================================
 
 export {
     API_BASE
