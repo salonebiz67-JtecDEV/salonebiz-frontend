@@ -1,4 +1,13 @@
-const STORAGE_KEY = "salonebiz_user";
+// =====================================================
+// 🇸🇱 SALONEBIZ GLOBAL STATE
+// =====================================================
+
+const STORAGE_KEY =
+    "salonebiz_user";
+
+const TOKEN_KEY =
+    "salonebiz_token";
+
 
 let currentUser = null;
 
@@ -12,13 +21,17 @@ export function loadUser() {
     try {
 
         const saved =
-            localStorage.getItem(STORAGE_KEY);
+            localStorage.getItem(
+                STORAGE_KEY
+            );
+
 
         if (!saved) {
 
             currentUser = null;
 
             return null;
+
         }
 
 
@@ -31,35 +44,74 @@ export function loadUser() {
             typeof user !== "object"
         ) {
 
-            localStorage.removeItem(
-                STORAGE_KEY
-            );
-
-            currentUser = null;
+            clearUser();
 
             return null;
+
         }
 
 
-        currentUser = user;
+        /*
+         * Keep the JWT synchronized.
+         *
+         * New system:
+         * salonebiz_token
+         *
+         * Older system:
+         * user.token
+         */
+
+        const token =
+            localStorage.getItem(
+                TOKEN_KEY
+            );
+
+
+        if (
+            token &&
+            !user.token
+        ) {
+
+            user.token =
+                token;
+
+        }
+
+
+        if (
+            user.token &&
+            !token
+        ) {
+
+            localStorage.setItem(
+                TOKEN_KEY,
+                user.token
+            );
+
+        }
+
+
+        currentUser =
+            user;
+
 
         return currentUser;
 
     } catch (error) {
 
         console.error(
-            "Failed to load SaloneBiz user:",
+            "❌ Failed to load SaloneBiz user:",
             error
         );
 
-        localStorage.removeItem(
-            STORAGE_KEY
-        );
 
-        currentUser = null;
+        clearUser();
+
 
         return null;
+
     }
+
 }
 
 
@@ -67,26 +119,58 @@ export function loadUser() {
 // SET USER
 // =====================================================
 
-export function setUser(user) {
+export function setUser(
+    user
+) {
 
-    if (!user) {
+    if (
+        !user ||
+        typeof user !== "object"
+    ) {
 
         clearUser();
 
         return null;
+
     }
 
 
-    currentUser = user;
+    currentUser =
+        {
+            ...user
+        };
 
+
+    /*
+     * Save JWT separately when available.
+     */
+
+    if (
+        currentUser.token
+    ) {
+
+        localStorage.setItem(
+            TOKEN_KEY,
+            currentUser.token
+        );
+
+    }
+
+
+    /*
+     * Store user session.
+     */
 
     localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify(user)
+        JSON.stringify(
+            currentUser
+        )
     );
 
 
     return currentUser;
+
 }
 
 
@@ -96,7 +180,20 @@ export function setUser(user) {
 
 export function getUser() {
 
+    /*
+     * If state has not been initialized yet,
+     * try loading it from localStorage.
+     */
+
+    if (!currentUser) {
+
+        loadUser();
+
+    }
+
+
     return currentUser;
+
 }
 
 
@@ -106,11 +203,19 @@ export function getUser() {
 
 export function clearUser() {
 
-    currentUser = null;
+    currentUser =
+        null;
+
 
     localStorage.removeItem(
         STORAGE_KEY
     );
+
+
+    localStorage.removeItem(
+        TOKEN_KEY
+    );
+
 }
 
 
@@ -120,7 +225,21 @@ export function clearUser() {
 
 export function isLoggedIn() {
 
-    return !!currentUser;
+    const user =
+        getUser();
+
+
+    const token =
+        localStorage.getItem(
+            TOKEN_KEY
+        );
+
+
+    return Boolean(
+        user &&
+        token
+    );
+
 }
 
 
@@ -132,24 +251,49 @@ export function updateUser(
     updates = {}
 ) {
 
-    if (!currentUser) {
+    const user =
+        getUser();
+
+
+    if (!user) {
+
         return null;
+
     }
 
 
     currentUser = {
-        ...currentUser,
+        ...user,
         ...updates
     };
 
 
+    /*
+     * Keep token synchronized.
+     */
+
+    if (
+        currentUser.token
+    ) {
+
+        localStorage.setItem(
+            TOKEN_KEY,
+            currentUser.token
+        );
+
+    }
+
+
     localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify(currentUser)
+        JSON.stringify(
+            currentUser
+        )
     );
 
 
     return currentUser;
+
 }
 
 
@@ -159,7 +303,12 @@ export function updateUser(
 
 export function getUserId() {
 
-    return currentUser?.id || null;
+    const user =
+        getUser();
+
+
+    return user?.id || null;
+
 }
 
 
@@ -169,7 +318,25 @@ export function getUserId() {
 
 export function getToken() {
 
-    return currentUser?.token || null;
+    const directToken =
+        localStorage.getItem(
+            TOKEN_KEY
+        );
+
+
+    if (directToken) {
+
+        return directToken;
+
+    }
+
+
+    const user =
+        getUser();
+
+
+    return user?.token || null;
+
 }
 
 
@@ -180,4 +347,5 @@ export function getToken() {
 export function refreshState() {
 
     return loadUser();
+
 }
