@@ -1,5 +1,9 @@
+// =====================================================
+// 🇸🇱 SALONEBIZ AUTHENTICATION
+// =====================================================
+
 import {
-    login
+    login as apiLogin
 } from "./api.js";
 
 import {
@@ -13,10 +17,15 @@ import {
 } from "./router.js";
 
 
+// =====================================================
+// INITIALIZE AUTH
+// =====================================================
+
 export function initializeAuth() {
 
     const user =
         loadUser();
+
 
     if (user) {
 
@@ -27,12 +36,13 @@ export function initializeAuth() {
         showLogin();
 
     }
+
 }
 
 
-/* =====================================
-   LOGIN SCREEN
-===================================== */
+// =====================================================
+// LOGIN SCREEN
+// =====================================================
 
 function showLogin() {
 
@@ -41,11 +51,28 @@ function showLogin() {
             "app"
         );
 
-    document
-        .getElementById(
+
+    if (!app) {
+        console.error(
+            "❌ #app element not found"
+        );
+        return;
+    }
+
+
+    const bottomNav =
+        document.getElementById(
             "bottomNav"
-        )
-        .classList.add("hidden");
+        );
+
+
+    if (bottomNav) {
+
+        bottomNav.classList.add(
+            "hidden"
+        );
+
+    }
 
 
     app.innerHTML = `
@@ -96,6 +123,7 @@ function showLogin() {
                             class="form-input"
                             id="loginEmail"
                             type="email"
+                            autocomplete="email"
                             placeholder="Email"
                         >
 
@@ -104,6 +132,7 @@ function showLogin() {
                             class="form-input"
                             id="loginPassword"
                             type="password"
+                            autocomplete="current-password"
                             placeholder="Password"
                         >
 
@@ -111,6 +140,7 @@ function showLogin() {
                         <button
                             class="primary-button"
                             id="loginButton"
+                            type="button"
                         >
                             Sign in
                         </button>
@@ -132,54 +162,84 @@ function showLogin() {
             </main>
 
         </div>
+
     `;
 
 
-    document
-        .getElementById(
+    const loginButton =
+        document.getElementById(
             "loginButton"
-        )
-        .addEventListener(
+        );
+
+
+    if (loginButton) {
+
+        loginButton.addEventListener(
             "click",
             performLogin
         );
+
+    }
+
 }
 
 
-/* =====================================
-   LOGIN
-===================================== */
+// =====================================================
+// LOGIN
+// =====================================================
 
 async function performLogin() {
 
-    const email =
-        document
-            .getElementById(
-                "loginEmail"
-            )
-            .value
-            .trim();
+    const emailInput =
+        document.getElementById(
+            "loginEmail"
+        );
 
-    const password =
-        document
-            .getElementById(
-                "loginPassword"
-            )
-            .value;
+
+    const passwordInput =
+        document.getElementById(
+            "loginPassword"
+        );
 
 
     const error =
-        document
-            .getElementById(
-                "loginError"
-            );
+        document.getElementById(
+            "loginError"
+        );
+
 
     const button =
-        document
-            .getElementById(
-                "loginButton"
-            );
+        document.getElementById(
+            "loginButton"
+        );
 
+
+    if (
+        !emailInput ||
+        !passwordInput ||
+        !error ||
+        !button
+    ) {
+
+        console.error(
+            "❌ Login elements not found"
+        );
+
+        return;
+    }
+
+
+    const email =
+        emailInput.value.trim();
+
+
+    const password =
+        passwordInput.value;
+
+
+    // =================================================
+    // VALIDATION
+    // =================================================
 
     if (!email || !password) {
 
@@ -196,37 +256,93 @@ async function performLogin() {
         "Signing in...";
 
 
+    error.textContent =
+        "";
+
+
+    // =================================================
+    // API LOGIN
+    // =================================================
+
     try {
 
         const result =
-            await login(
+            await apiLogin(
                 email,
                 password
             );
 
 
-        if (!result.success) {
+        if (
+            !result ||
+            !result.success
+        ) {
 
             throw new Error(
-                result.message
+                result?.message ||
+                "Login failed."
             );
 
         }
 
 
+        // =================================================
+        // USER CHECK
+        // =================================================
+
+        if (!result.user) {
+
+            throw new Error(
+                "Login succeeded but the server did not return a user."
+            );
+
+        }
+
+
+        /*
+         * api.js already stores the JWT.
+         *
+         * Here we also keep the complete session
+         * inside state.js.
+         */
+
+        const user = {
+            ...result.user
+        };
+
+
+        if (result.token) {
+
+            user.token =
+                result.token;
+
+        }
+
+
         setUser(
-            result.user
+            user
         );
 
+
+        // =================================================
+        // OPEN APP
+        // =================================================
 
         showApp();
 
 
     } catch (err) {
 
+        console.error(
+            "❌ Login error:",
+            err
+        );
+
+
         error.textContent =
             err.message ||
             "Login failed.";
+
 
         button.disabled = false;
 
@@ -238,9 +354,9 @@ async function performLogin() {
 }
 
 
-/* =====================================
-   SHOW APP
-===================================== */
+// =====================================================
+// SHOW APPLICATION
+// =====================================================
 
 function showApp() {
 
@@ -249,50 +365,116 @@ function showApp() {
             "bottomNav"
         );
 
-    nav.classList.remove(
-        "hidden"
-    );
+
+    if (nav) {
+
+        nav.classList.remove(
+            "hidden"
+        );
+
+    }
 
 
     setupNavigation();
 
-    navigate("home");
+
+    try {
+
+        navigate(
+            "home"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "❌ Navigation error:",
+            error
+        );
+
+    }
 
 }
 
 
-/* =====================================
-   LOGOUT
-===================================== */
+// =====================================================
+// LOGOUT
+// =====================================================
 
 export function logout() {
 
     clearUser();
+
+
+    // Also remove JWT
+    localStorage.removeItem(
+        "salonebiz_token"
+    );
+
+
+    const nav =
+        document.getElementById(
+            "bottomNav"
+        );
+
+
+    if (nav) {
+
+        nav.classList.add(
+            "hidden"
+        );
+
+    }
+
 
     showLogin();
 
 }
 
 
-/* =====================================
-   NAVIGATION
-===================================== */
+// =====================================================
+// NAVIGATION
+// =====================================================
 
 function setupNavigation() {
 
-    document
-        .querySelectorAll(
+    const buttons =
+        document.querySelectorAll(
             "[data-page]"
-        )
-        .forEach(button => {
+        );
+
+
+    buttons.forEach(
+        button => {
 
             button.onclick = () => {
 
-                navigate(
-                    button.dataset.page
-                );
+                const page =
+                    button.dataset.page;
+
+
+                if (!page) {
+                    return;
+                }
+
+
+                try {
+
+                    navigate(
+                        page
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "❌ Navigation error:",
+                        error
+                    );
+
+                }
 
             };
 
-        });
+        }
+    );
+
 }
