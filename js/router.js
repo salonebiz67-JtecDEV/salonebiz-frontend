@@ -3,10 +3,6 @@
 // js/router.js
 // =====================================================
 
-// =====================================================
-// PAGE LOADERS
-// =====================================================
-
 const routes = {
 
     home: () =>
@@ -49,7 +45,6 @@ export async function navigate(page = "home") {
     const app =
         document.getElementById("app");
 
-
     if (!app) {
 
         console.error(
@@ -57,31 +52,33 @@ export async function navigate(page = "home") {
         );
 
         return;
-
     }
 
 
-    const loader =
-        routes[page];
+    // -------------------------------------------------
+    // UNKNOWN PAGE
+    // -------------------------------------------------
 
-
-    if (!loader) {
+    if (!routes[page]) {
 
         console.warn(
             `⚠️ Unknown page "${page}". Loading home.`
         );
 
         return navigate("home");
-
     }
 
+
+    // -------------------------------------------------
+    // NAVIGATION STATE
+    // -------------------------------------------------
 
     updateNavigation(page);
 
 
-    // =================================================
-    // LOADING
-    // =================================================
+    // -------------------------------------------------
+    // LOADING SCREEN
+    // -------------------------------------------------
 
     app.innerHTML = `
 
@@ -103,16 +100,12 @@ export async function navigate(page = "home") {
 
                         <div
                             class="loader"
-                            style="
-                                margin:auto;
-                            "
+                            style="margin:auto"
                         ></div>
 
                         <p
                             class="text-muted"
-                            style="
-                                margin-top:15px;
-                            "
+                            style="margin-top:15px"
                         >
                             Loading SaloneBiz...
                         </p>
@@ -135,26 +128,65 @@ export async function navigate(page = "home") {
         );
 
 
-        // Load the page module
+        // -------------------------------------------------
+        // LOAD PAGE MODULE
+        // -------------------------------------------------
+
         const renderer =
-            await loader();
+            await routes[page]();
 
 
-        // Make sure export exists
+        // -------------------------------------------------
+        // VERIFY RENDERER
+        // -------------------------------------------------
+
         if (
             typeof renderer !==
             "function"
         ) {
 
             throw new Error(
-                `Page "${page}" does not export the required render function.`
+                `Page "${page}" does not export the correct renderer.`
             );
-
         }
 
 
-        // Render page
+        // -------------------------------------------------
+        // RENDER
+        // -------------------------------------------------
+
         await renderer(app);
+
+
+        // -------------------------------------------------
+        // SAVE CURRENT PAGE
+        // -------------------------------------------------
+
+        window.SaloneBizCurrentPage =
+            page;
+
+
+        // -------------------------------------------------
+        // UPDATE HASH
+        // -------------------------------------------------
+
+        const newHash =
+            `#${page}`;
+
+        if (
+            window.location.hash !==
+            newHash
+        ) {
+
+            history.replaceState(
+                {
+                    page
+                },
+                "",
+                newHash
+            );
+
+        }
 
 
         console.log(
@@ -162,146 +194,133 @@ export async function navigate(page = "home") {
         );
 
 
-        window.SaloneBizCurrentPage =
-            page;
-
-
-        // =================================================
-        // URL
-        // =================================================
-
-        try {
-
-            const newUrl =
-                `#${page}`;
-
-            if (
-                window.location.hash !==
-                newUrl
-            ) {
-
-                history.replaceState(
-                    { page },
-                    "",
-                    newUrl
-                );
-
-            }
-
-        } catch (error) {
-
-            console.warn(
-                "⚠️ URL update failed:",
-                error
-            );
-
-        }
-
-
     } catch (error) {
 
         console.error(
-            `❌ Failed to load page "${page}":`,
+            `❌ Failed to load page "${page}"`,
             error
         );
 
 
-        app.innerHTML = `
-
-            <div class="page">
-
-                <main class="container">
-
-                    <div
-                        class="create-box"
-                        style="
-                            margin:30px 16px;
-                            text-align:center;
-                        "
-                    >
-
-                        <div style="
-                            font-size:50px;
-                            margin-bottom:15px;
-                        ">
-                            ⚠️
-                        </div>
+        console.error(
+            "Full error:",
+            error?.stack
+        );
 
 
-                        <h2>
-                            Page failed to load
-                        </h2>
-
-
-                        <p
-                            class="text-muted"
-                            style="
-                                margin-top:12px;
-                                line-height:1.6;
-                            "
-                        >
-                            ${escapeHtml(
-                                error?.message ||
-                                "Unknown error"
-                            )}
-                        </p>
-
-
-                        <button
-                            class="primary-button"
-                            id="routerRetry"
-                            type="button"
-                            style="
-                                margin-top:20px;
-                            "
-                        >
-                            Try Again
-                        </button>
-
-
-                        <button
-                            id="routerHome"
-                            type="button"
-                            style="
-                                margin-top:10px;
-                                background:none;
-                                border:none;
-                                color:inherit;
-                                text-decoration:underline;
-                            "
-                        >
-                            Back to Home
-                        </button>
-
-                    </div>
-
-                </main>
-
-            </div>
-
-        `;
-
-
-        document
-            .getElementById(
-                "routerRetry"
-            )
-            ?.addEventListener(
-                "click",
-                () => navigate(page)
-            );
-
-
-        document
-            .getElementById(
-                "routerHome"
-            )
-            ?.addEventListener(
-                "click",
-                () => navigate("home")
-            );
+        showPageError(
+            app,
+            page,
+            error
+        );
 
     }
+
+}
+
+
+// =====================================================
+// PAGE ERROR SCREEN
+// =====================================================
+
+function showPageError(
+    app,
+    page,
+    error
+) {
+
+    const message =
+        error?.message ||
+        "Unknown error";
+
+
+    app.innerHTML = `
+
+        <div class="page">
+
+            <main class="container">
+
+                <div
+                    class="create-box"
+                    style="
+                        margin-top:30px;
+                        text-align:center;
+                    "
+                >
+
+                    <div
+                        style="
+                            font-size:52px;
+                            margin-bottom:15px;
+                        "
+                    >
+                        ⚠️
+                    </div>
+
+                    <h2>
+                        Page failed to load
+                    </h2>
+
+                    <p
+                        class="text-muted"
+                        style="
+                            margin-top:12px;
+                            word-break:break-word;
+                        "
+                    >
+                        ${escapeHtml(message)}
+                    </p>
+
+                    <p
+                        style="
+                            margin-top:12px;
+                            font-size:13px;
+                            opacity:.65;
+                        "
+                    >
+                        Page: ${escapeHtml(page)}
+                    </p>
+
+                    <button
+                        class="primary-button"
+                        id="routerRetry"
+                        type="button"
+                    >
+                        Try Again
+                    </button>
+
+                    <button
+                        class="secondary-button"
+                        id="routerHome"
+                        type="button"
+                        style="margin-top:10px"
+                    >
+                        Go Home
+                    </button>
+
+                </div>
+
+            </main>
+
+        </div>
+
+    `;
+
+
+    document
+        .getElementById("routerRetry")
+        ?.addEventListener(
+            "click",
+            () => navigate(page)
+        );
+
+
+    document
+        .getElementById("routerHome")
+        ?.addEventListener(
+            "click",
+            () => navigate("home")
+        );
 
 }
 
@@ -322,7 +341,6 @@ function updateNavigation(
 
             const page =
                 button.dataset.page;
-
 
             button.classList.toggle(
                 "active",
@@ -386,22 +404,6 @@ export function setupRouter() {
 
 
 // =====================================================
-// ESCAPE HTML
-// =====================================================
-
-function escapeHtml(value) {
-
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-
-}
-
-
-// =====================================================
 // CURRENT PAGE
 // =====================================================
 
@@ -422,5 +424,21 @@ export function getCurrentPage() {
 export function getRoutes() {
 
     return Object.keys(routes);
+
+}
+
+
+// =====================================================
+// ESCAPE HTML
+// =====================================================
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
