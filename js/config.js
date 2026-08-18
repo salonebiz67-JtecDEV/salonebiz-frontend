@@ -1,21 +1,35 @@
-// ============================================
+// =====================================================
 // 🇸🇱 SALONEBIZ FRONTEND CONFIGURATION
-// ============================================
+// =====================================================
 
-const API_BASE_URL =
+export const API_BASE_URL =
     "https://salonebiz-backend.onrender.com";
 
 
-const CONFIG = {
+export const CONFIG = {
 
-    // Backend
+    // =================================================
+    // APP
+    // =================================================
+
+    APP_NAME:
+        "SaloneBiz",
+
+    VERSION:
+        "1.0.0",
+
+
+    // =================================================
+    // BACKEND
+    // =================================================
+
     API_BASE_URL,
 
-    // App
-    APP_NAME: "SaloneBiz",
-    VERSION: "1.0.0",
 
-    // API endpoints
+    // =================================================
+    // API ENDPOINTS
+    // =================================================
+
     API: {
 
         health:
@@ -44,21 +58,28 @@ const CONFIG = {
 
         messages:
             `${API_BASE_URL}/api/messages`
+
     }
 
 };
 
 
-// Make configuration available globally
-window.SALONEBIZ_CONFIG = CONFIG;
+// =====================================================
+// GLOBAL CONFIGURATION
+// =====================================================
+
+window.SALONEBIZ_CONFIG =
+    CONFIG;
 
 
-// Also expose the API base URL directly
 window.SALONEBIZ_API_BASE =
     API_BASE_URL;
 
 
-// Debug information
+// =====================================================
+// DEBUG
+// =====================================================
+
 console.log(
     `🇸🇱 ${CONFIG.APP_NAME} v${CONFIG.VERSION}`
 );
