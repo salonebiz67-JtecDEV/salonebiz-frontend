@@ -7,15 +7,10 @@ import {
 } from "./config.js";
 
 
-const API_BASE =
-    API_BASE_URL;
+const API_BASE = API_BASE_URL;
 
-
-const SESSION_KEY =
-    "salonebiz_user";
-
-const TOKEN_KEY =
-    "salonebiz_token";
+const SESSION_KEY = "salonebiz_user";
+const TOKEN_KEY = "salonebiz_token";
 
 
 // =====================================================
@@ -24,17 +19,17 @@ const TOKEN_KEY =
 
 function getToken() {
 
-    // Preferred location
-    const directToken =
+    // First check dedicated token storage
+    const token =
         localStorage.getItem(TOKEN_KEY);
 
-    if (directToken) {
-        return directToken;
+    if (token) {
+        return token;
     }
 
 
     // Backward compatibility:
-    // token may be stored inside the user object
+    // token may also exist inside salonebiz_user
     try {
 
         const saved =
@@ -70,7 +65,6 @@ async function apiRequest(
     const controller =
         new AbortController();
 
-
     const timeout =
         setTimeout(
             () => controller.abort(),
@@ -89,8 +83,8 @@ async function apiRequest(
         };
 
 
-        // Add JSON content type only
-        // when body is not FormData
+        // Only add JSON header when
+        // a body exists and it is not FormData
         if (
             options.body &&
             !(options.body instanceof FormData)
@@ -127,7 +121,7 @@ async function apiRequest(
             await response.text();
 
 
-        let data;
+        let data = {};
 
 
         try {
@@ -149,19 +143,25 @@ async function apiRequest(
         }
 
 
-        // Authentication expired
-        if (
-            response.status === 401
-        ) {
+        // =================================================
+        // AUTHENTICATION ERROR
+        // =================================================
+
+        if (response.status === 401) {
+
+            console.warn(
+                "⚠️ Authentication expired or invalid."
+            );
 
             localStorage.removeItem(
                 TOKEN_KEY
             );
-
-            // Do not immediately redirect.
-            // Let the current page handle the error.
         }
 
+
+        // =================================================
+        // HTTP ERROR
+        // =================================================
 
         if (!response.ok) {
 
@@ -174,6 +174,7 @@ async function apiRequest(
 
         return data;
 
+
     } catch (error) {
 
         if (
@@ -182,12 +183,13 @@ async function apiRequest(
         ) {
 
             throw new Error(
-                "Request timed out. Please check your connection."
+                "Request timed out. Please check your internet connection."
             );
         }
 
 
         throw error;
+
 
     } finally {
 
@@ -223,10 +225,15 @@ export async function login(
 
 
     /*
-       IMPORTANT:
-       Your backend must return the JWT
-       as result.token for protected routes.
-    */
+     * Backend should return:
+     *
+     * {
+     *   success: true,
+     *   token: "...",
+     *   user: {...}
+     * }
+     */
+
 
     if (
         result.success &&
@@ -240,17 +247,13 @@ export async function login(
     }
 
 
-    /*
-       Save user separately.
-       Never save the password.
-    */
-
     if (
         result.success &&
         result.user
     ) {
 
         const user = {
+
             ...result.user,
 
             ...(result.token
@@ -259,6 +262,7 @@ export async function login(
                         result.token
                 }
                 : {})
+
         };
 
 
@@ -270,9 +274,12 @@ export async function login(
 
 
     return result;
-
 }
 
+
+// =====================================================
+// REGISTER
+// =====================================================
 
 export async function register(
     name,
@@ -299,9 +306,9 @@ export async function register(
 
 
     /*
-       Some backends automatically log the
-       user in after registration.
-    */
+     * Some backends return a token
+     * immediately after registration.
+     */
 
     if (
         result.success &&
@@ -318,8 +325,10 @@ export async function register(
 
             localStorage.setItem(
                 SESSION_KEY,
+
                 JSON.stringify({
                     ...result.user,
+
                     token:
                         result.token
                 })
@@ -329,7 +338,6 @@ export async function register(
 
 
     return result;
-
 }
 
 
@@ -346,7 +354,6 @@ export function logout() {
     localStorage.removeItem(
         SESSION_KEY
     );
-
 }
 
 
@@ -371,13 +378,16 @@ export async function checkAPI() {
 
 
         return {
+
             success: false,
+
             status: "offline",
+
             message:
                 error.message
+
         };
     }
-
 }
 
 
@@ -393,7 +403,6 @@ export async function getPosts(
     return apiRequest(
         `/api/posts/feed?page=${page}&limit=${limit}`
     );
-
 }
 
 
@@ -406,7 +415,6 @@ export async function getFeed(
         page,
         limit
     );
-
 }
 
 
@@ -421,6 +429,7 @@ export async function createPost(
 
             body:
                 JSON.stringify({
+
                     caption:
                         post.caption ||
                         "",
@@ -429,10 +438,10 @@ export async function createPost(
                         post.image_url ||
                         post.imageUrl ||
                         ""
+
                 })
         }
     );
-
 }
 
 
@@ -443,7 +452,6 @@ export async function getPost(
     return apiRequest(
         `/api/posts/${postId}`
     );
-
 }
 
 
@@ -457,7 +465,6 @@ export async function deletePost(
             method: "DELETE"
         }
     );
-
 }
 
 
@@ -475,7 +482,6 @@ export async function likePost(
             method: "POST"
         }
     );
-
 }
 
 
@@ -484,7 +490,7 @@ export async function unlikePost(
 ) {
 
     // Backend uses the same endpoint
-    // as a like/unlike toggle.
+    // as the toggle.
 
     return apiRequest(
         `/api/interactions/posts/${postId}/like`,
@@ -492,7 +498,6 @@ export async function unlikePost(
             method: "POST"
         }
     );
-
 }
 
 
@@ -510,7 +515,6 @@ export async function favoritePost(
             method: "POST"
         }
     );
-
 }
 
 
@@ -519,7 +523,7 @@ export async function unfavoritePost(
 ) {
 
     // Backend uses the same endpoint
-    // as a favorite/unfavorite toggle.
+    // as the toggle.
 
     return apiRequest(
         `/api/interactions/posts/${postId}/favorite`,
@@ -527,7 +531,6 @@ export async function unfavoritePost(
             method: "POST"
         }
     );
-
 }
 
 
@@ -538,7 +541,6 @@ export async function getInteractionStatus(
     return apiRequest(
         `/api/interactions/posts/${postId}`
     );
-
 }
 
 
@@ -553,7 +555,6 @@ export async function getComments(
     return apiRequest(
         `/api/interactions/posts/${postId}/comments`
     );
-
 }
 
 
@@ -573,7 +574,6 @@ export async function addComment(
                 })
         }
     );
-
 }
 
 
@@ -590,14 +590,12 @@ export async function getProfile(
         return apiRequest(
             `/api/users/${userId}`
         );
-
     }
 
 
     return apiRequest(
         "/api/users/me"
     );
-
 }
 
 
@@ -606,7 +604,6 @@ export async function getMyProfile() {
     return apiRequest(
         "/api/users/me"
     );
-
 }
 
 
@@ -617,7 +614,6 @@ export async function getUserProfile(
     return apiRequest(
         `/api/users/${userId}`
     );
-
 }
 
 
@@ -635,7 +631,6 @@ export async function followUser(
             method: "POST"
         }
     );
-
 }
 
 
@@ -649,7 +644,6 @@ export async function unfollowUser(
             method: "DELETE"
         }
     );
-
 }
 
 
@@ -660,7 +654,6 @@ export async function getFollowers(
     return apiRequest(
         `/api/friends/${userId}/followers`
     );
-
 }
 
 
@@ -671,7 +664,6 @@ export async function getFollowing(
     return apiRequest(
         `/api/friends/${userId}/following`
     );
-
 }
 
 
@@ -696,7 +688,6 @@ export async function sendMessage(
                 })
         }
     );
-
 }
 
 
@@ -705,7 +696,6 @@ export async function getMessages() {
     return apiRequest(
         "/api/messages"
     );
-
 }
 
 
@@ -723,7 +713,6 @@ export async function apiGet(
             method: "GET"
         }
     );
-
 }
 
 
@@ -745,7 +734,6 @@ export async function apiPost(
                 JSON.stringify(body)
         }
     );
-
 }
 
 
@@ -767,7 +755,6 @@ export async function apiPut(
                 JSON.stringify(body)
         }
     );
-
 }
 
 
@@ -789,7 +776,6 @@ export async function apiPatch(
                 JSON.stringify(body)
         }
     );
-
 }
 
 
@@ -807,12 +793,11 @@ export async function apiDelete(
             method: "DELETE"
         }
     );
-
 }
 
 
 // =====================================================
-// EXPORT API BASE
+// API BASE
 // =====================================================
 
 export {
