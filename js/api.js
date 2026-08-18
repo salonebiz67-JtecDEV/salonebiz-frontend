@@ -1,24 +1,46 @@
+// =====================================================
+// 🇸🇱 SALONEBIZ API CLIENT
+// =====================================================
+
+import {
+    API_BASE_URL
+} from "./config.js";
+
+
 const API_BASE =
-    "https://salonebiz-backend.onrender.com";
+    API_BASE_URL;
+
+
+const SESSION_KEY =
+    "salonebiz_user";
+
+const TOKEN_KEY =
+    "salonebiz_token";
 
 
 // =====================================================
-// SESSION
-// =====================================================
-
-const SESSION_KEY = "salonebiz_user";
-
-
-// =====================================================
-// GET TOKEN
+// TOKEN MANAGEMENT
 // =====================================================
 
 function getToken() {
 
+    // Preferred location
+    const directToken =
+        localStorage.getItem(TOKEN_KEY);
+
+    if (directToken) {
+        return directToken;
+    }
+
+
+    // Backward compatibility:
+    // token may be stored inside the user object
     try {
 
         const saved =
-            localStorage.getItem(SESSION_KEY);
+            localStorage.getItem(
+                SESSION_KEY
+            );
 
         if (!saved) {
             return null;
@@ -37,7 +59,7 @@ function getToken() {
 
 
 // =====================================================
-// CORE API REQUEST
+// CORE REQUEST
 // =====================================================
 
 async function apiRequest(
@@ -45,65 +67,134 @@ async function apiRequest(
     options = {}
 ) {
 
-    const token = getToken();
-
-    const headers = {
-        ...(options.headers || {})
-    };
+    const controller =
+        new AbortController();
 
 
-    // JSON body
-    if (
-        options.body &&
-        !(options.body instanceof FormData)
-    ) {
-        headers["Content-Type"] =
-            "application/json";
-    }
+    const timeout =
+        setTimeout(
+            () => controller.abort(),
+            15000
+        );
 
-
-    // JWT
-    if (token) {
-
-        headers.Authorization =
-            `Bearer ${token}`;
-    }
-
-
-    const response = await fetch(
-        `${API_BASE}${endpoint}`,
-        {
-            ...options,
-            headers
-        }
-    );
-
-
-    let data;
 
     try {
 
-        data = await response.json();
+        const token =
+            getToken();
 
-    } catch {
 
-        data = {
-            success: false,
-            message: "Invalid server response"
+        const headers = {
+            ...(options.headers || {})
         };
+
+
+        // Add JSON content type only
+        // when body is not FormData
+        if (
+            options.body &&
+            !(options.body instanceof FormData)
+        ) {
+
+            headers["Content-Type"] =
+                "application/json";
+        }
+
+
+        // JWT authentication
+        if (token) {
+
+            headers.Authorization =
+                `Bearer ${token}`;
+        }
+
+
+        const response =
+            await fetch(
+                `${API_BASE}${endpoint}`,
+                {
+                    ...options,
+
+                    signal:
+                        controller.signal,
+
+                    headers
+                }
+            );
+
+
+        const text =
+            await response.text();
+
+
+        let data;
+
+
+        try {
+
+            data =
+                text
+                    ? JSON.parse(text)
+                    : {};
+
+        } catch {
+
+            data = {
+                success: false,
+                message:
+                    text ||
+                    "Invalid server response"
+            };
+
+        }
+
+
+        // Authentication expired
+        if (
+            response.status === 401
+        ) {
+
+            localStorage.removeItem(
+                TOKEN_KEY
+            );
+
+            // Do not immediately redirect.
+            // Let the current page handle the error.
+        }
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.message ||
+                `Request failed (${response.status})`
+            );
+        }
+
+
+        return data;
+
+    } catch (error) {
+
+        if (
+            error.name ===
+            "AbortError"
+        ) {
+
+            throw new Error(
+                "Request timed out. Please check your connection."
+            );
+        }
+
+
+        throw error;
+
+    } finally {
+
+        clearTimeout(timeout);
+
     }
 
-
-    if (!response.ok) {
-
-        throw new Error(
-            data.message ||
-            `Request failed: ${response.status}`
-        );
-    }
-
-
-    return data;
 }
 
 
@@ -122,27 +213,64 @@ export async function login(
             {
                 method: "POST",
 
-                body: JSON.stringify({
-                    email,
-                    password
-                })
+                body:
+                    JSON.stringify({
+                        email,
+                        password
+                    })
             }
         );
 
+
+    /*
+       IMPORTANT:
+       Your backend must return the JWT
+       as result.token for protected routes.
+    */
+
+    if (
+        result.success &&
+        result.token
+    ) {
+
+        localStorage.setItem(
+            TOKEN_KEY,
+            result.token
+        );
+    }
+
+
+    /*
+       Save user separately.
+       Never save the password.
+    */
 
     if (
         result.success &&
         result.user
     ) {
 
+        const user = {
+            ...result.user,
+
+            ...(result.token
+                ? {
+                    token:
+                        result.token
+                }
+                : {})
+        };
+
+
         localStorage.setItem(
             SESSION_KEY,
-            JSON.stringify(result.user)
+            JSON.stringify(user)
         );
     }
 
 
     return result;
+
 }
 
 
@@ -153,21 +281,78 @@ export async function register(
     phone
 ) {
 
-    return apiRequest(
-        "/api/auth/register",
-        {
-            method: "POST",
+    const result =
+        await apiRequest(
+            "/api/auth/register",
+            {
+                method: "POST",
 
-            body: JSON.stringify({
-                name,
-                email,
-                password,
-                phone
-            })
+                body:
+                    JSON.stringify({
+                        name,
+                        email,
+                        password,
+                        phone
+                    })
+            }
+        );
+
+
+    /*
+       Some backends automatically log the
+       user in after registration.
+    */
+
+    if (
+        result.success &&
+        result.token
+    ) {
+
+        localStorage.setItem(
+            TOKEN_KEY,
+            result.token
+        );
+
+
+        if (result.user) {
+
+            localStorage.setItem(
+                SESSION_KEY,
+                JSON.stringify({
+                    ...result.user,
+                    token:
+                        result.token
+                })
+            );
         }
-    );
+    }
+
+
+    return result;
+
 }
 
+
+// =====================================================
+// LOGOUT
+// =====================================================
+
+export function logout() {
+
+    localStorage.removeItem(
+        TOKEN_KEY
+    );
+
+    localStorage.removeItem(
+        SESSION_KEY
+    );
+
+}
+
+
+// =====================================================
+// API HEALTH
+// =====================================================
 
 export async function checkAPI() {
 
@@ -180,21 +365,24 @@ export async function checkAPI() {
     } catch (error) {
 
         console.error(
-            "API health error:",
+            "❌ API health error:",
             error
         );
+
 
         return {
             success: false,
             status: "offline",
-            message: error.message
+            message:
+                error.message
         };
     }
+
 }
 
 
 // =====================================================
-// POSTS
+// POSTS / FEED
 // =====================================================
 
 export async function getPosts(
@@ -205,6 +393,7 @@ export async function getPosts(
     return apiRequest(
         `/api/posts/feed?page=${page}&limit=${limit}`
     );
+
 }
 
 
@@ -217,6 +406,7 @@ export async function getFeed(
         page,
         limit
     );
+
 }
 
 
@@ -229,17 +419,20 @@ export async function createPost(
         {
             method: "POST",
 
-            body: JSON.stringify({
-                caption:
-                    post.caption || "",
+            body:
+                JSON.stringify({
+                    caption:
+                        post.caption ||
+                        "",
 
-                image_url:
-                    post.image_url ||
-                    post.imageUrl ||
-                    ""
-            })
+                    image_url:
+                        post.image_url ||
+                        post.imageUrl ||
+                        ""
+                })
         }
     );
+
 }
 
 
@@ -250,6 +443,7 @@ export async function getPost(
     return apiRequest(
         `/api/posts/${postId}`
     );
+
 }
 
 
@@ -263,11 +457,12 @@ export async function deletePost(
             method: "DELETE"
         }
     );
+
 }
 
 
 // =====================================================
-// POST INTERACTIONS
+// LIKES
 // =====================================================
 
 export async function likePost(
@@ -280,6 +475,7 @@ export async function likePost(
             method: "POST"
         }
     );
+
 }
 
 
@@ -287,10 +483,8 @@ export async function unlikePost(
     postId
 ) {
 
-    /*
-       Backend uses one toggle endpoint.
-       Calling it again removes the like.
-    */
+    // Backend uses the same endpoint
+    // as a like/unlike toggle.
 
     return apiRequest(
         `/api/interactions/posts/${postId}/like`,
@@ -298,8 +492,13 @@ export async function unlikePost(
             method: "POST"
         }
     );
+
 }
 
+
+// =====================================================
+// FAVORITES
+// =====================================================
 
 export async function favoritePost(
     postId
@@ -311,6 +510,7 @@ export async function favoritePost(
             method: "POST"
         }
     );
+
 }
 
 
@@ -318,10 +518,8 @@ export async function unfavoritePost(
     postId
 ) {
 
-    /*
-       Backend uses one toggle endpoint.
-       Calling it again removes the favorite.
-    */
+    // Backend uses the same endpoint
+    // as a favorite/unfavorite toggle.
 
     return apiRequest(
         `/api/interactions/posts/${postId}/favorite`,
@@ -329,6 +527,7 @@ export async function unfavoritePost(
             method: "POST"
         }
     );
+
 }
 
 
@@ -339,6 +538,7 @@ export async function getInteractionStatus(
     return apiRequest(
         `/api/interactions/posts/${postId}`
     );
+
 }
 
 
@@ -353,6 +553,7 @@ export async function getComments(
     return apiRequest(
         `/api/interactions/posts/${postId}/comments`
     );
+
 }
 
 
@@ -366,16 +567,18 @@ export async function addComment(
         {
             method: "POST",
 
-            body: JSON.stringify({
-                text
-            })
+            body:
+                JSON.stringify({
+                    text
+                })
         }
     );
+
 }
 
 
 // =====================================================
-// USERS / PROFILE
+// USERS / PROFILES
 // =====================================================
 
 export async function getProfile(
@@ -387,12 +590,14 @@ export async function getProfile(
         return apiRequest(
             `/api/users/${userId}`
         );
+
     }
 
 
     return apiRequest(
         "/api/users/me"
     );
+
 }
 
 
@@ -401,6 +606,7 @@ export async function getMyProfile() {
     return apiRequest(
         "/api/users/me"
     );
+
 }
 
 
@@ -411,11 +617,12 @@ export async function getUserProfile(
     return apiRequest(
         `/api/users/${userId}`
     );
+
 }
 
 
 // =====================================================
-// FOLLOW / FRIENDS
+// FRIENDS / FOLLOW
 // =====================================================
 
 export async function followUser(
@@ -428,6 +635,7 @@ export async function followUser(
             method: "POST"
         }
     );
+
 }
 
 
@@ -441,6 +649,7 @@ export async function unfollowUser(
             method: "DELETE"
         }
     );
+
 }
 
 
@@ -451,6 +660,7 @@ export async function getFollowers(
     return apiRequest(
         `/api/friends/${userId}/followers`
     );
+
 }
 
 
@@ -461,6 +671,7 @@ export async function getFollowing(
     return apiRequest(
         `/api/friends/${userId}/following`
     );
+
 }
 
 
@@ -478,12 +689,14 @@ export async function sendMessage(
         {
             method: "POST",
 
-            body: JSON.stringify({
-                receiver_id,
-                content
-            })
+            body:
+                JSON.stringify({
+                    receiver_id,
+                    content
+                })
         }
     );
+
 }
 
 
@@ -492,11 +705,12 @@ export async function getMessages() {
     return apiRequest(
         "/api/messages"
     );
+
 }
 
 
 // =====================================================
-// GENERIC HELPERS
+// GENERIC GET
 // =====================================================
 
 export async function apiGet(
@@ -509,8 +723,13 @@ export async function apiGet(
             method: "GET"
         }
     );
+
 }
 
+
+// =====================================================
+// GENERIC POST
+// =====================================================
 
 export async function apiPost(
     endpoint,
@@ -522,11 +741,17 @@ export async function apiPost(
         {
             method: "POST",
 
-            body: JSON.stringify(body)
+            body:
+                JSON.stringify(body)
         }
     );
+
 }
 
+
+// =====================================================
+// GENERIC PUT
+// =====================================================
 
 export async function apiPut(
     endpoint,
@@ -538,11 +763,17 @@ export async function apiPut(
         {
             method: "PUT",
 
-            body: JSON.stringify(body)
+            body:
+                JSON.stringify(body)
         }
     );
+
 }
 
+
+// =====================================================
+// GENERIC PATCH
+// =====================================================
 
 export async function apiPatch(
     endpoint,
@@ -554,11 +785,17 @@ export async function apiPatch(
         {
             method: "PATCH",
 
-            body: JSON.stringify(body)
+            body:
+                JSON.stringify(body)
         }
     );
+
 }
 
+
+// =====================================================
+// GENERIC DELETE
+// =====================================================
 
 export async function apiDelete(
     endpoint
@@ -570,11 +807,12 @@ export async function apiDelete(
             method: "DELETE"
         }
     );
+
 }
 
 
 // =====================================================
-// API BASE URL
+// EXPORT API BASE
 // =====================================================
 
 export {
