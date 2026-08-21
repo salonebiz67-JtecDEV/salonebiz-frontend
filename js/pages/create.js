@@ -1,16 +1,55 @@
 // =====================================================
 // 🇸🇱 SALONEBIZ CREATE POST
-// Fixed: NO window.supabase / createClient dependency
+// JWT AUTHENTICATION + SUPABASE STORAGE
 // =====================================================
 
-import { createPost, API_BASE } from "../api.js";
+import { createPost } from "../api.js";
 
-const SESSION_KEY = "salonebiz_user";
+const SUPABASE_URL =
+    "https://gkvdqxpvjtunwbogizvl.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+    "sb_publishable_2MKnxDXNcq1NGlZ2E-iMzg_Bk8u8ORc";
+
+const STORAGE_BUCKET = "posts";
 const TOKEN_KEY = "salonebiz_token";
+
+function getSaloneBizToken() {
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    if (token) return token;
+
+    try {
+        const saved = localStorage.getItem("salonebiz_user");
+        const user = saved ? JSON.parse(saved) : null;
+        return user?.token || null;
+    } catch {
+        return null;
+    }
+}
+
+function getSupabaseClient() {
+    if (window.supabaseClient) return window.supabaseClient;
+
+    if (
+        window.supabase &&
+        typeof window.supabase.createClient === "function"
+    ) {
+        return window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+    }
+
+    throw new Error(
+        "Supabase client is not loaded. Check your Supabase script in index.html."
+    );
+}
 
 export async function renderCreate(app) {
     if (!app) {
-        throw new Error("Create: app element not found.");
+        console.error("❌ Create: #app not found.");
+        return;
     }
 
     app.innerHTML = `
@@ -23,48 +62,65 @@ export async function renderCreate(app) {
 
             <main class="container">
                 <h1 class="page-title">Share your business</h1>
+
                 <p class="page-subtitle">
                     Upload a photo and tell people about your business.
                 </p>
 
                 <section class="create-box">
-                    <label class="upload-area" for="imageInput" id="uploadArea">
-                        <div>
+                    <label
+                        class="upload-area"
+                        for="imageInput"
+                        id="uploadArea"
+                    >
+                        <div id="uploadText">
                             <div style="font-size:40px">📸</div>
                             <p>Tap to choose an image</p>
                             <small>JPG, PNG or WEBP</small>
                         </div>
                     </label>
 
-                    <input id="imageInput"
+                    <input
+                        id="imageInput"
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
-                        hidden>
+                        hidden
+                    >
 
-                    <input class="form-input"
+                    <input
+                        class="form-input"
                         id="businessName"
                         type="text"
                         maxlength="150"
-                        placeholder="Business name">
+                        placeholder="Business name"
+                    >
 
-                    <input class="form-input"
+                    <input
+                        class="form-input"
                         id="location"
                         type="text"
                         maxlength="200"
-                        placeholder="Location">
+                        placeholder="Location"
+                    >
 
-                    <textarea class="form-input"
+                    <textarea
+                        class="form-input"
                         id="description"
                         rows="4"
                         maxlength="2000"
-                        placeholder="Tell people about your business..."></textarea>
+                        placeholder="Tell people about your business..."
+                    ></textarea>
 
-                    <p id="publishStatus"
-                        style="text-align:center;margin:12px 0;min-height:20px;"></p>
+                    <p
+                        id="publishStatus"
+                        style="text-align:center;margin:12px 0;min-height:20px;"
+                    ></p>
 
-                    <button class="primary-button"
+                    <button
+                        class="primary-button"
                         id="publishButton"
-                        type="button">
+                        type="button"
+                    >
                         Publish Post
                     </button>
                 </section>
@@ -77,11 +133,15 @@ export async function renderCreate(app) {
     const button = document.getElementById("publishButton");
     const status = document.getElementById("publishStatus");
 
-    input?.addEventListener("change", () => {
+    input.addEventListener("change", () => {
         const file = input.files?.[0];
         if (!file) return;
 
-        const allowed = ["image/jpeg", "image/png", "image/webp"];
+        const allowed = [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ];
 
         if (!allowed.includes(file.type)) {
             input.value = "";
@@ -102,7 +162,13 @@ export async function renderCreate(app) {
                 <img
                     src="${escapeHtml(event.target?.result || "")}"
                     alt="Selected image"
-                    style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;"
+                    style="
+                        width:100%;
+                        height:100%;
+                        object-fit:cover;
+                        border-radius:inherit;
+                        display:block;
+                    "
                 >
             `;
         };
@@ -110,18 +176,42 @@ export async function renderCreate(app) {
         reader.readAsDataURL(file);
     });
 
-    button?.addEventListener("click", async () => {
-        const file = input?.files?.[0];
-        const business = document.getElementById("businessName")?.value.trim() || "";
-        const location = document.getElementById("location")?.value.trim() || "";
-        const description = document.getElementById("description")?.value.trim() || "";
+    button.addEventListener("click", async () => {
+        const file = input.files?.[0];
 
-        if (!file) return alert("Please select an image.");
-        if (!business) return alert("Enter your business name.");
-        if (!location) return alert("Enter your location.");
-        if (!description) return alert("Tell people something about your business.");
+        const business =
+            document.getElementById("businessName")?.value.trim() || "";
 
-        const token = getToken();
+        const location =
+            document.getElementById("location")?.value.trim() || "";
+
+        const description =
+            document.getElementById("description")?.value.trim() || "";
+
+        if (!file) {
+            alert("Please select an image.");
+            return;
+        }
+
+        if (!business) {
+            alert("Enter your business name.");
+            return;
+        }
+
+        if (!location) {
+            alert("Enter your location.");
+            return;
+        }
+
+        if (!description) {
+            alert("Tell people something about your business.");
+            return;
+        }
+
+        // IMPORTANT:
+        // This is the SAME JWT used by api.js.
+        // We do NOT call supabase.auth.getSession().
+        const token = getSaloneBizToken();
 
         if (!token) {
             alert("You are not logged in. Please log in again.");
@@ -129,53 +219,25 @@ export async function renderCreate(app) {
         }
 
         button.disabled = true;
+        button.textContent = "Uploading image...";
         status.textContent = "Uploading your image...";
-        button.textContent = "Uploading...";
 
         try {
-            const formData = new FormData();
-            formData.append("image", file);
+            console.log("🇸🇱 SaloneBiz JWT found.");
 
-            const upload = await fetch(`${API_BASE}/api/uploads/image`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            const uploadText = await upload.text();
-            let uploadResult = {};
-
-            try {
-                uploadResult = uploadText ? JSON.parse(uploadText) : {};
-            } catch {
-                uploadResult = {
-                    success: false,
-                    message: uploadText || "Invalid upload response."
-                };
-            }
-
-            if (!upload.ok || !uploadResult.success) {
-                throw new Error(
-                    uploadResult.message ||
-                    `Image upload failed (${upload.status}).`
-                );
-            }
-
-            if (!uploadResult.image_url) {
-                throw new Error("Upload succeeded but no image URL was returned.");
-            }
-
-            status.textContent = "Saving your post...";
-            button.textContent = "Publishing...";
+            const imageUrl = await uploadImage(file);
 
             const caption =
                 `${business}\n\n${location}\n\n${description}`;
 
+            button.textContent = "Publishing...";
+            status.textContent = "Saving your post...";
+
+            // createPost() automatically sends:
+            // Authorization: Bearer <SaloneBiz JWT>
             const result = await createPost({
                 caption,
-                image_url: uploadResult.image_url
+                image_url: imageUrl
             });
 
             if (!result?.success) {
@@ -184,39 +246,75 @@ export async function renderCreate(app) {
                 );
             }
 
-            status.textContent = "✅ Post published successfully!";
+            status.textContent =
+                "✅ Post published successfully!";
+
             button.textContent = "Published ✓";
 
             setTimeout(() => {
                 window.location.hash = "#home";
-                window.location.reload();
             }, 700);
 
         } catch (error) {
             console.error("❌ Publish error:", error);
 
-            status.textContent = "";
+            status.textContent =
+                `❌ ${error?.message || "Unable to publish post."}`;
+
             button.disabled = false;
             button.textContent = "Publish Post";
-
-            alert(error?.message || "Unable to publish post.");
         }
     });
 }
 
-function getToken() {
-    const direct = localStorage.getItem(TOKEN_KEY);
+async function uploadImage(file) {
+    const supabase = getSupabaseClient();
 
-    if (direct) return direct;
+    const extension = getFileExtension(file);
 
-    try {
-        const saved = localStorage.getItem(SESSION_KEY);
-        if (!saved) return null;
+    const uniqueName =
+        `${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
-        return JSON.parse(saved)?.token || null;
-    } catch {
-        return null;
+    const storagePath = `posts/${uniqueName}`;
+
+    const { error } =
+        await supabase
+            .storage
+            .from(STORAGE_BUCKET)
+            .upload(storagePath, file, {
+                cacheControl: "3600",
+                contentType: file.type,
+                upsert: false
+            });
+
+    if (error) {
+        console.error("❌ Storage upload error:", error);
+
+        throw new Error(
+            error.message || "Image upload failed."
+        );
     }
+
+    const { data } =
+        supabase
+            .storage
+            .from(STORAGE_BUCKET)
+            .getPublicUrl(storagePath);
+
+    if (!data?.publicUrl) {
+        throw new Error(
+            "Image uploaded but public URL could not be created."
+        );
+    }
+
+    return data.publicUrl;
+}
+
+function getFileExtension(file) {
+    if (file.type === "image/jpeg") return "jpg";
+    if (file.type === "image/png") return "png";
+    if (file.type === "image/webp") return "webp";
+    return "jpg";
 }
 
 function escapeHtml(value) {
