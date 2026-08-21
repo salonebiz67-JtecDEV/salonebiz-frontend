@@ -1,637 +1,229 @@
 // =====================================================
 // 🇸🇱 SALONEBIZ CREATE POST
-// FIXED SUPABASE AUTHENTICATED IMAGE UPLOAD
+// Fixed: NO window.supabase / createClient dependency
 // =====================================================
 
-import {
-    createPost
-} from "../api.js";
+import { createPost, API_BASE } from "../api.js";
 
-
-// =====================================================
-// SUPABASE
-// =====================================================
-
-const SUPABASE_URL =
-    "https://gkvdqxpvjtunwbogizvl.supabase.co";
-
-const SUPABASE_PUBLISHABLE_KEY =
-    "sb_publishable_2MKnxDXNcq1NGlZ2E-iMzg_Bk8u8ORc";
-
-const STORAGE_BUCKET =
-    "posts";
-
-
-// =====================================================
-// SUPABASE CLIENT
-// =====================================================
-
-const supabase =
-    window.supabaseClient ||
-    window.supabase.createClient(
-        SUPABASE_URL,
-        SUPABASE_PUBLISHABLE_KEY
-    );
-
-
-// =====================================================
-// RENDER CREATE PAGE
-// =====================================================
+const SESSION_KEY = "salonebiz_user";
+const TOKEN_KEY = "salonebiz_token";
 
 export async function renderCreate(app) {
+    if (!app) {
+        throw new Error("Create: app element not found.");
+    }
 
     app.innerHTML = `
-
         <div class="page">
-
             <header class="app-header">
-
                 <div class="header-inner">
-
-                    <div class="brand">
-                        🇸🇱 Create Post
-                    </div>
-
+                    <div class="brand">🇸🇱 Create Post</div>
                 </div>
-
             </header>
 
             <main class="container">
-
-                <h1 class="page-title">
-                    Share your business
-                </h1>
-
+                <h1 class="page-title">Share your business</h1>
                 <p class="page-subtitle">
                     Upload a photo and tell people about your business.
                 </p>
 
                 <section class="create-box">
-
-                    <label
-                        class="upload-area"
-                        for="imageInput"
-                        id="uploadArea"
-                    >
-
-                        <div id="uploadText">
-
-                            <div style="font-size:40px">
-                                📸
-                            </div>
-
-                            <p>
-                                Tap to choose an image
-                            </p>
-
-                            <small>
-                                JPG, PNG or WEBP
-                            </small>
-
+                    <label class="upload-area" for="imageInput" id="uploadArea">
+                        <div>
+                            <div style="font-size:40px">📸</div>
+                            <p>Tap to choose an image</p>
+                            <small>JPG, PNG or WEBP</small>
                         </div>
-
                     </label>
 
-                    <input
-                        id="imageInput"
+                    <input id="imageInput"
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
-                        hidden
-                    >
+                        hidden>
 
-                    <input
-                        class="form-input"
+                    <input class="form-input"
                         id="businessName"
                         type="text"
                         maxlength="150"
-                        placeholder="Business name"
-                    >
+                        placeholder="Business name">
 
-                    <input
-                        class="form-input"
+                    <input class="form-input"
                         id="location"
                         type="text"
                         maxlength="200"
-                        placeholder="Location"
-                    >
+                        placeholder="Location">
 
-                    <textarea
-                        class="form-input"
+                    <textarea class="form-input"
                         id="description"
                         rows="4"
                         maxlength="2000"
-                        placeholder="Tell people about your business..."
-                    ></textarea>
+                        placeholder="Tell people about your business..."></textarea>
 
-                    <p
-                        id="publishStatus"
-                        style="
-                            text-align:center;
-                            margin:12px 0;
-                            min-height:20px;
-                        "
-                    ></p>
+                    <p id="publishStatus"
+                        style="text-align:center;margin:12px 0;min-height:20px;"></p>
 
-                    <button
-                        class="primary-button"
+                    <button class="primary-button"
                         id="publishButton"
-                        type="button"
-                    >
+                        type="button">
                         Publish Post
                     </button>
-
                 </section>
-
             </main>
-
         </div>
     `;
 
+    const input = document.getElementById("imageInput");
+    const area = document.getElementById("uploadArea");
+    const button = document.getElementById("publishButton");
+    const status = document.getElementById("publishStatus");
 
-    const input =
-        document.getElementById("imageInput");
+    input?.addEventListener("change", () => {
+        const file = input.files?.[0];
+        if (!file) return;
 
-    const area =
-        document.getElementById("uploadArea");
+        const allowed = ["image/jpeg", "image/png", "image/webp"];
 
-    const button =
-        document.getElementById("publishButton");
-
-    const status =
-        document.getElementById("publishStatus");
-
-
-    // =================================================
-    // IMAGE PREVIEW
-    // =================================================
-
-    input.addEventListener(
-        "change",
-        () => {
-
-            const file =
-                input.files?.[0];
-
-            if (!file) {
-                return;
-            }
-
-            const allowedTypes = [
-                "image/jpeg",
-                "image/png",
-                "image/webp"
-            ];
-
-            if (
-                !allowedTypes.includes(
-                    file.type
-                )
-            ) {
-
-                input.value = "";
-
-                alert(
-                    "Please choose a JPG, PNG or WEBP image."
-                );
-
-                return;
-            }
-
-            const maxSize =
-                10 * 1024 * 1024;
-
-            if (
-                file.size > maxSize
-            ) {
-
-                input.value = "";
-
-                alert(
-                    "Image is too large. Maximum size is 10 MB."
-                );
-
-                return;
-            }
-
-            const reader =
-                new FileReader();
-
-            reader.onload =
-                event => {
-
-                    area.innerHTML = `
-
-                        <img
-                            src="${event.target.result}"
-                            alt="Selected image"
-                            style="
-                                width:100%;
-                                height:100%;
-                                object-fit:cover;
-                                border-radius:inherit;
-                                display:block;
-                            "
-                        >
-
-                    `;
-                };
-
-            reader.readAsDataURL(file);
-
+        if (!allowed.includes(file.type)) {
+            input.value = "";
+            alert("Please choose a JPG, PNG or WEBP image.");
+            return;
         }
-    );
 
+        if (file.size > 10 * 1024 * 1024) {
+            input.value = "";
+            alert("Image is too large. Maximum size is 10 MB.");
+            return;
+        }
 
-    // =================================================
-    // PUBLISH
-    // =================================================
+        const reader = new FileReader();
 
-    button.addEventListener(
-        "click",
-        async () => {
+        reader.onload = event => {
+            area.innerHTML = `
+                <img
+                    src="${escapeHtml(event.target?.result || "")}"
+                    alt="Selected image"
+                    style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;"
+                >
+            `;
+        };
 
-            const file =
-                input.files?.[0];
+        reader.readAsDataURL(file);
+    });
 
-            const business =
-                document
-                    .getElementById("businessName")
-                    .value
-                    .trim();
+    button?.addEventListener("click", async () => {
+        const file = input?.files?.[0];
+        const business = document.getElementById("businessName")?.value.trim() || "";
+        const location = document.getElementById("location")?.value.trim() || "";
+        const description = document.getElementById("description")?.value.trim() || "";
 
-            const description =
-                document
-                    .getElementById("description")
-                    .value
-                    .trim();
+        if (!file) return alert("Please select an image.");
+        if (!business) return alert("Enter your business name.");
+        if (!location) return alert("Enter your location.");
+        if (!description) return alert("Tell people something about your business.");
 
-            const location =
-                document
-                    .getElementById("location")
-                    .value
-                    .trim();
+        const token = getToken();
 
+        if (!token) {
+            alert("You are not logged in. Please log in again.");
+            return;
+        }
 
-            if (!file) {
+        button.disabled = true;
+        status.textContent = "Uploading your image...";
+        button.textContent = "Uploading...";
 
-                alert(
-                    "Please select an image."
-                );
+        try {
+            const formData = new FormData();
+            formData.append("image", file);
 
-                return;
-            }
+            const upload = await fetch(`${API_BASE}/api/uploads/image`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
 
-
-            if (!business) {
-
-                alert(
-                    "Enter your business name."
-                );
-
-                return;
-            }
-
-
-            if (!location) {
-
-                alert(
-                    "Enter your location."
-                );
-
-                return;
-            }
-
-
-            if (!description) {
-
-                alert(
-                    "Tell people something about your business."
-                );
-
-                return;
-            }
-
-
-            button.disabled = true;
-
-            button.textContent =
-                "Checking account...";
-
-            status.textContent =
-                "Checking your SaloneBiz account...";
-
+            const uploadText = await upload.text();
+            let uploadResult = {};
 
             try {
-
-                // =========================================
-                // CHECK AUTH SESSION
-                // =========================================
-
-                const {
-                    data: sessionData,
-                    error: sessionError
-                } =
-                    await supabase.auth.getSession();
-
-
-                if (sessionError) {
-
-                    throw sessionError;
-
-                }
-
-
-                const session =
-                    sessionData?.session;
-
-
-                if (!session?.access_token) {
-
-                    throw new Error(
-                        "You are not logged in. Please log in again."
-                    );
-
-                }
-
-
-                console.log(
-                    "✅ Authenticated user:",
-                    session.user.id
-                );
-
-
-                // =========================================
-                // UPLOAD IMAGE
-                // =========================================
-
-                button.textContent =
-                    "Uploading image...";
-
-                status.textContent =
-                    "Uploading your image...";
-
-
-                const imageUrl =
-                    await uploadImage(
-                        file
-                    );
-
-
-                // =========================================
-                // CREATE CAPTION
-                // =========================================
-
-                const caption =
-                    `${business}\n\n${location}\n\n${description}`;
-
-
-                // =========================================
-                // CREATE POST
-                // =========================================
-
-                button.textContent =
-                    "Publishing...";
-
-                status.textContent =
-                    "Saving your post...";
-
-
-                const result =
-                    await createPost({
-
-                        caption,
-
-                        image_url:
-                            imageUrl
-
-                    });
-
-
-                if (
-                    !result ||
-                    !result.success
-                ) {
-
-                    throw new Error(
-                        result?.message ||
-                        "Unable to create post."
-                    );
-
-                }
-
-
-                // =========================================
-                // SUCCESS
-                // =========================================
-
-                status.textContent =
-                    "✅ Post published successfully!";
-
-                button.textContent =
-                    "Published ✓";
-
-
-                setTimeout(
-                    () => {
-
-                        window.location.hash =
-                            "#home";
-
-                        window.location.reload();
-
-                    },
-                    700
-                );
-
-
-            } catch (error) {
-
-                console.error(
-                    "❌ Publish error:",
-                    error
-                );
-
-
-                status.textContent =
-                    "";
-
-
-                button.disabled =
-                    false;
-
-                button.textContent =
-                    "Publish Post";
-
-
-                alert(
-                    error?.message ||
-                    "Unable to publish post."
-                );
-
+                uploadResult = uploadText ? JSON.parse(uploadText) : {};
+            } catch {
+                uploadResult = {
+                    success: false,
+                    message: uploadText || "Invalid upload response."
+                };
             }
 
+            if (!upload.ok || !uploadResult.success) {
+                throw new Error(
+                    uploadResult.message ||
+                    `Image upload failed (${upload.status}).`
+                );
+            }
+
+            if (!uploadResult.image_url) {
+                throw new Error("Upload succeeded but no image URL was returned.");
+            }
+
+            status.textContent = "Saving your post...";
+            button.textContent = "Publishing...";
+
+            const caption =
+                `${business}\n\n${location}\n\n${description}`;
+
+            const result = await createPost({
+                caption,
+                image_url: uploadResult.image_url
+            });
+
+            if (!result?.success) {
+                throw new Error(
+                    result?.message || "Unable to create post."
+                );
+            }
+
+            status.textContent = "✅ Post published successfully!";
+            button.textContent = "Published ✓";
+
+            setTimeout(() => {
+                window.location.hash = "#home";
+                window.location.reload();
+            }, 700);
+
+        } catch (error) {
+            console.error("❌ Publish error:", error);
+
+            status.textContent = "";
+            button.disabled = false;
+            button.textContent = "Publish Post";
+
+            alert(error?.message || "Unable to publish post.");
         }
-    );
-
+    });
 }
 
+function getToken() {
+    const direct = localStorage.getItem(TOKEN_KEY);
 
-// =====================================================
-// UPLOAD IMAGE
-// =====================================================
+    if (direct) return direct;
 
-async function uploadImage(file) {
+    try {
+        const saved = localStorage.getItem(SESSION_KEY);
+        if (!saved) return null;
 
-    if (!file) {
-
-        throw new Error(
-            "No image selected."
-        );
-
+        return JSON.parse(saved)?.token || null;
+    } catch {
+        return null;
     }
-
-
-    // =============================================
-    // CURRENT AUTH SESSION
-    // =============================================
-
-    const {
-        data,
-        error: sessionError
-    } =
-        await supabase.auth.getSession();
-
-
-    if (sessionError) {
-
-        throw sessionError;
-
-    }
-
-
-    const session =
-        data?.session;
-
-
-    if (!session?.access_token) {
-
-        throw new Error(
-            "Your login session has expired. Please log in again."
-        );
-
-    }
-
-
-    // =============================================
-    // FILE NAME
-    // =============================================
-
-    const extension =
-        getFileExtension(file);
-
-
-    const uniqueName =
-        `${Date.now()}-${crypto.randomUUID()}.${extension}`;
-
-
-    const storagePath =
-        `posts/${uniqueName}`;
-
-
-    // =============================================
-    // UPLOAD THROUGH SUPABASE SDK
-    // =============================================
-
-    const {
-        error
-    } =
-        await supabase
-            .storage
-            .from(STORAGE_BUCKET)
-            .upload(
-                storagePath,
-                file,
-                {
-                    cacheControl: "3600",
-                    contentType: file.type,
-                    upsert: false
-                }
-            );
-
-
-    if (error) {
-
-        console.error(
-            "❌ Storage upload error:",
-            error
-        );
-
-        throw new Error(
-            error.message ||
-            "Image upload failed."
-        );
-
-    }
-
-
-    // =============================================
-    // PUBLIC URL
-    // =============================================
-
-    const {
-        data: publicData
-    } =
-        supabase
-            .storage
-            .from(STORAGE_BUCKET)
-            .getPublicUrl(
-                storagePath
-            );
-
-
-    if (
-        !publicData?.publicUrl
-    ) {
-
-        throw new Error(
-            "Image uploaded but public URL could not be created."
-        );
-
-    }
-
-
-    return publicData.publicUrl;
-
 }
 
-
-// =====================================================
-// FILE EXTENSION
-// =====================================================
-
-function getFileExtension(file) {
-
-    if (
-        file.type ===
-        "image/jpeg"
-    ) {
-        return "jpg";
-    }
-
-    if (
-        file.type ===
-        "image/png"
-    ) {
-        return "png";
-    }
-
-    if (
-        file.type ===
-        "image/webp"
-    ) {
-        return "webp";
-    }
-
-    return "jpg";
-
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
