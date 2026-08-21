@@ -1,0 +1,54 @@
+SALONEBIZ FIX — IMPORTANT
+
+Your screenshot proves:
+GET /api/posts/feed works and returns:
+{ "success": true, "posts": [] }
+
+The Create page was failing because it executed:
+window.supabase.createClient(...)
+
+when window.supabase was undefined.
+
+This package removes that browser-side Supabase SDK dependency.
+
+FILES:
+1. frontend/js/router.js
+2. frontend/js/pages/create.js
+3. backend/src/routes/uploads.js
+
+BACKEND SETUP:
+1. Copy uploads.js to:
+   src/routes/uploads.js
+
+2. Install multer:
+   npm install multer
+
+3. In your main server file, add:
+   const uploadsRoutes = require("./routes/uploads");
+   app.use("/api/uploads", uploadsRoutes);
+
+4. Add these Render environment variables:
+   SUPABASE_URL=https://gkvdqxpvjtunwbogizvl.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
+   SUPABASE_STORAGE_BUCKET=posts
+
+IMPORTANT:
+Never put SUPABASE_SERVICE_ROLE_KEY in frontend code.
+Only keep it in Render environment variables.
+
+5. Make sure the Supabase Storage bucket named "posts" exists and is PUBLIC
+if you want the returned image URL to display directly in the feed.
+
+6. Deploy the backend first, then deploy the frontend.
+
+After deployment:
+- Home should still load.
+- Create should open without createClient error.
+- Publish sends the image to /api/uploads/image.
+- Backend uploads it to Supabase Storage.
+- Backend returns image_url.
+- Frontend creates the post through /api/posts.
+
+NOTE:
+Your current feed is not broken. The empty [] simply means there are currently
+no posts in the database.
