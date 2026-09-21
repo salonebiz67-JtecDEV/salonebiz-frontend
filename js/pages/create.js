@@ -208,15 +208,7 @@ export async function renderCreate(app) {
             return;
         }
 
-        // IMPORTANT:
-        // This is the SAME JWT used by api.js.
-        // We do NOT call supabase.auth.getSession().
-        const token = getSaloneBizToken();
-
-        if (!token) {
-            alert("You are not logged in. Please log in again.");
-            return;
-        }
+        // Login check removed for now (add back before deploying).
 
         button.disabled = true;
         button.textContent = "Uploading image...";
