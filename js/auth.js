@@ -1,188 +1,16 @@
-import { apiPost } from "./api.js";
-import { CONFIG } from "./config.js";
-import { setUser, clearUser, loadUser } from "./state.js";
 import { navigate } from "./router.js";
 
 // =====================================================
-// 🇸🇱 SALONEBIZ AUTHENTICATION (temporary version)
+// 🇸🇱 SALONEBIZ AUTHENTICATION (temporarily disabled)
 //
-// Entry options for now:
-//   1. Continue with Google
-//   2. Continue as Guest
-//
-// Email/password login and create-account are removed
-// until the full login system is built before deploy.
-// =====================================================
-
-// =====================================================
-// INITIALIZE AUTH
+// Login and create-account are removed while the app is
+// being built. The app opens straight to Home.
+// Add the real login back before deploying.
 // =====================================================
 
 export function initializeAuth() {
-    try {
-        const user = loadUser();
-
-        if (user) {
-            showApp();
-        } else {
-            showWelcome();
-        }
-    } catch (error) {
-        console.error("❌ Authentication initialization error:", error);
-        showWelcome();
-    }
-}
-
-// =====================================================
-// WELCOME SCREEN (Google + Guest)
-// =====================================================
-
-function showWelcome() {
-    const app = document.getElementById("app");
-    if (!app) return;
-
-    document.getElementById("bottomNav")?.classList.add("hidden");
-
-    app.innerHTML = `
-        <div class="page">
-            <main class="container">
-                <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
-                    <div class="create-box" style="width:100%;">
-
-                        <div style="text-align:center;margin-bottom:30px;">
-                            <div style="font-size:50px;margin-bottom:10px;">🇸🇱</div>
-                            <h1>SaloneBiz</h1>
-                            <p class="text-muted">Your business. Your workspace.</p>
-                        </div>
-
-                        <div id="googleButton" style="display:flex;justify-content:center;min-height:44px;"></div>
-
-                        <p class="text-muted" style="text-align:center;margin:14px 0;">or</p>
-
-                        <button class="secondary-button" id="guestButton" type="button">
-                            Continue as Guest
-                        </button>
-
-                        <p id="loginError" style="color:#ff5577;margin-top:15px;text-align:center;min-height:20px;"></p>
-
-                    </div>
-                </div>
-            </main>
-        </div>
-    `;
-
-    document.getElementById("guestButton")?.addEventListener("click", continueAsGuest);
-
-    setupGoogleButton();
-}
-
-function showError(message) {
-    const el = document.getElementById("loginError");
-    if (el) el.textContent = message;
-}
-
-// =====================================================
-// GUEST
-// =====================================================
-
-function continueAsGuest() {
-    // No token: guests can browse, but cannot post.
-    setUser({
-        id: "guest",
-        name: "Guest",
-        email: "",
-        isGuest: true
-    });
-
     showApp();
 }
-
-// =====================================================
-// GOOGLE LOGIN
-// =====================================================
-
-function loadGoogleScript() {
-    return new Promise((resolve, reject) => {
-        if (window.google?.accounts?.id) {
-            resolve();
-            return;
-        }
-
-        const script = document.createElement("script");
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Could not load Google sign-in."));
-        document.head.appendChild(script);
-    });
-}
-
-async function setupGoogleButton() {
-    const container = document.getElementById("googleButton");
-    if (!container) return;
-
-    const clientId = CONFIG.GOOGLE_CLIENT_ID;
-
-    if (!clientId || clientId.startsWith("PASTE_")) {
-        showError("Google login isn't set up yet. You can continue as Guest.");
-        return;
-    }
-
-    try {
-        await loadGoogleScript();
-
-        window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleGoogleCredential
-        });
-
-        window.google.accounts.id.renderButton(container, {
-            theme: "outline",
-            size: "large",
-            text: "continue_with",
-            shape: "pill",
-            width: 280
-        });
-    } catch (error) {
-        console.error("❌ Google setup error:", error);
-        showError("Google login is unavailable right now. You can continue as Guest.");
-    }
-}
-
-async function handleGoogleCredential(response) {
-    showError("");
-
-    try {
-        if (!response?.credential) {
-            throw new Error("Google did not return a login.");
-        }
-
-        // Backend verifies the Google token and returns:
-        // { success: true, token: "<JWT>", user: {...} }
-        const result = await apiPost("/api/auth/google", {
-            credential: response.credential
-        });
-
-        if (!result?.success || !result.user) {
-            throw new Error(result?.message || "Google login failed.");
-        }
-
-        setUser({
-            ...result.user,
-            ...(result.token ? { token: result.token } : {})
-        });
-
-        showApp();
-    } catch (error) {
-        console.error("❌ Google login error:", error);
-        showError(error?.message || "Google login failed.");
-    }
-}
-
-// =====================================================
-// SHOW APPLICATION
-// =====================================================
 
 async function showApp() {
     document.getElementById("bottomNav")?.classList.remove("hidden");
@@ -219,25 +47,12 @@ async function showApp() {
     }
 }
 
-// =====================================================
-// LOGOUT (also used to leave guest mode)
-// =====================================================
-
+// Kept so other files that import logout don't break.
 export function logout() {
-    clearUser();
-
-    document.getElementById("bottomNav")?.classList.add("hidden");
-
-    history.replaceState(null, "", window.location.pathname);
-
-    showWelcome();
+    showApp();
 }
 
 window.SaloneBizAuth = { logout };
-
-// =====================================================
-// NAVIGATION
-// =====================================================
 
 function setupNavigation() {
     document.querySelectorAll("[data-page]").forEach(button => {
