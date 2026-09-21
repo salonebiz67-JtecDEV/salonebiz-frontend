@@ -68,7 +68,7 @@ export async function renderProfile(app) {
 
 
                 <p class="profile-email">
-                    ${escapeHTML(user.email)}
+                    ${escapeHTML(user.isGuest ? "Browsing as guest" : user.email)}
                 </p>
 
 
