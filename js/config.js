@@ -8,15 +8,6 @@ export const API_BASE_URL =
 
 export const CONFIG = {
 
-    // =================================================
-    // GOOGLE LOGIN
-    // Paste your Web Client ID from Google Cloud Console
-    // (APIs & Services > Credentials > OAuth client ID)
-    // =================================================
-
-    GOOGLE_CLIENT_ID:
-        "PASTE_YOUR_GOOGLE_CLIENT_ID_HERE",
-
 
     // =================================================
     // APP
