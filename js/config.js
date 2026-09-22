@@ -14,7 +14,7 @@ export const CONFIG = {
     // =================================================
 
     APP_NAME:
-        "SaloneBiz",
+        "KIVO",
 
     VERSION:
         "1.0.0",
