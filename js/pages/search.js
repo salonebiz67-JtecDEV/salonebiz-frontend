@@ -29,7 +29,7 @@ export async function renderSearch(app) {
 
                     <div>🔎</div>
 
-                    <p>Start searching SaloneBiz.</p>
+                    <p>Start searching Kivo.</p>
 
                 </div>
 
@@ -51,7 +51,7 @@ export async function renderSearch(app) {
 
             results.innerHTML = `
                 <div>🔎</div>
-                <p>Start searching SaloneBiz.</p>
+                <p>Start searching Kivo.</p>
             `;
 
             return;
