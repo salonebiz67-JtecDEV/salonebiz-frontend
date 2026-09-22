@@ -217,7 +217,15 @@ export async function renderCreate(app) {
         try {
             console.log("🇸🇱 SaloneBiz JWT found.");
 
-            const imageUrl = await uploadImage(file);
+            let imageUrl;
+
+            try {
+                imageUrl = await uploadImage(file);
+            } catch (uploadError) {
+                throw new Error(
+                    `Step 1 (image upload to Supabase) failed: ${uploadError?.message || uploadError}`
+                );
+            }
 
             const caption =
                 `${business}\n\n${location}\n\n${description}`;
@@ -227,10 +235,18 @@ export async function renderCreate(app) {
 
             // createPost() automatically sends:
             // Authorization: Bearer <SaloneBiz JWT>
-            const result = await createPost({
-                caption,
-                image_url: imageUrl
-            });
+            let result;
+
+            try {
+                result = await createPost({
+                    caption,
+                    image_url: imageUrl
+                });
+            } catch (postError) {
+                throw new Error(
+                    `Step 2 (saving post on server) failed: ${postError?.message || postError}`
+                );
+            }
 
             if (!result?.success) {
                 throw new Error(
