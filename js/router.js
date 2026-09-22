@@ -34,7 +34,7 @@ export async function navigate(page = "home") {
                 <div style="min-height:70vh;display:flex;align-items:center;justify-content:center;">
                     <div style="text-align:center;padding:30px;">
                         <div class="loader" style="margin:auto"></div>
-                        <p class="text-muted" style="margin-top:15px">Loading SaloneBiz...</p>
+                        <p class="text-muted" style="margin-top:15px">Loading Kivo...</p>
                     </div>
                 </div>
             </main>
