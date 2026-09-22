@@ -15,7 +15,7 @@ document.addEventListener(
     "DOMContentLoaded",
     () => {
 
-        console.log("🇸🇱 SaloneBiz starting...");
+        console.log("🇸🇱 Kivo starting...");
 
         const app =
             document.getElementById("app");
@@ -64,7 +64,7 @@ document.addEventListener(
                         </div>
 
                         <h2>
-                            SaloneBiz could not start
+                            Kivo could not start
                         </h2>
 
                         <p style="
