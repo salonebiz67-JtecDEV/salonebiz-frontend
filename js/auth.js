@@ -30,7 +30,7 @@ async function showApp() {
                     <main class="container">
                         <div class="create-box" style="margin-top:30px;text-align:center;">
                             <div style="font-size:50px;margin-bottom:15px;">⚠️</div>
-                            <h2>SaloneBiz couldn't open</h2>
+                            <h2>Kivo couldn't open</h2>
                             <p class="text-muted" style="margin-top:10px;">
                                 ${escapeHtml(error?.message || "The home page failed to load.")}
                             </p>
