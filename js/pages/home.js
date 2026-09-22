@@ -21,30 +21,18 @@ export async function renderHome(app) {
     }
 
     app.innerHTML = `
-        <div class="page">
-            <header class="app-header">
-                <div class="header-inner">
-                    <div class="brand">
-                        <span class="brand-flag">🇸🇱</span>
-                        SaloneBiz
-                    </div>
-                    <button class="header-action" id="searchButton"
-                        type="button" aria-label="Search">🔎</button>
-                </div>
-            </header>
+        <div class="page tiktok-page">
+            <div class="tiktok-topbar">
+                <span class="tiktok-tab active">For You</span>
+                <button class="header-action tiktok-search" id="searchButton"
+                    type="button" aria-label="Search">🔎</button>
+            </div>
 
-            <main class="container">
-                <h1 class="page-title">For You</h1>
-                <p class="page-subtitle">
-                    Discover businesses around Sierra Leone.
-                </p>
-
-                <div id="feed">
-                    <div style="display:flex;justify-content:center;padding:40px;">
-                        <div class="loader"></div>
-                    </div>
+            <div id="feed">
+                <div style="height:100dvh;display:flex;align-items:center;justify-content:center;">
+                    <div class="loader"></div>
                 </div>
-            </main>
+            </div>
         </div>
     `;
 
@@ -56,7 +44,7 @@ export async function renderHome(app) {
     );
 
     try {
-        console.log("🇸🇱 Loading SaloneBiz feed...");
+        console.log("🇸🇱 Loading Kivo feed...");
 
         const result = await getFeed(1, 20);
         console.log("🇸🇱 Feed response:", result);
@@ -72,16 +60,18 @@ export async function renderHome(app) {
 
         if (!posts.length) {
             feed.innerHTML = `
-                <div class="create-box" style="text-align:center;margin-top:30px;">
-                    <div style="font-size:45px;">🏪</div>
-                    <h2>No posts yet</h2>
-                    <p class="text-muted">
-                        Be the first business to share something on SaloneBiz.
-                    </p>
-                    <button class="primary-button" id="createFirstPost"
-                        type="button" style="margin-top:15px;">
-                        Create First Post
-                    </button>
+                <div style="height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;">
+                    <div class="create-box" style="text-align:center;max-width:320px;margin:auto;">
+                        <div style="font-size:45px;">🏪</div>
+                        <h2>No posts yet</h2>
+                        <p class="text-muted">
+                            Be the first business to share something on Kivo.
+                        </p>
+                        <button class="primary-button" id="createFirstPost"
+                            type="button" style="margin-top:15px;">
+                            Create First Post
+                        </button>
+                    </div>
                 </div>
             `;
 
@@ -99,21 +89,24 @@ export async function renderHome(app) {
         // Interaction requests can fail without breaking the feed.
         await loadInteractionStates(posts);
         attachPostEvents(feed);
+        setupSnapScrollEffect(feed);
 
     } catch (error) {
-        console.error("❌ Failed to load SaloneBiz feed:", error);
+        console.error("❌ Failed to load Kivo feed:", error);
 
         feed.innerHTML = `
-            <div class="create-box" style="text-align:center;margin-top:30px;">
-                <div style="font-size:45px;">⚠️</div>
-                <h2>Unable to load posts</h2>
-                <p class="text-muted">
-                    ${escapeHtml(error?.message ||
-                    "Something went wrong while loading the feed.")}
-                </p>
-                <button class="primary-button" id="retryFeed" type="button">
-                    Try Again
-                </button>
+            <div style="height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;">
+                <div class="create-box" style="text-align:center;max-width:320px;margin:auto;">
+                    <div style="font-size:45px;">⚠️</div>
+                    <h2>Unable to load posts</h2>
+                    <p class="text-muted">
+                        ${escapeHtml(error?.message ||
+                        "Something went wrong while loading the feed.")}
+                    </p>
+                    <button class="primary-button" id="retryFeed" type="button">
+                        Try Again
+                    </button>
+                </div>
             </div>
         `;
 
@@ -135,7 +128,7 @@ function normalizePosts(result) {
 function createPost(post = {}) {
     const postId = post?.id || post?.post_id || "";
     const userName =
-        post?.user_name || post?.name || post?.business_name || "SaloneBiz User";
+        post?.user_name || post?.name || post?.business_name || "Kivo User";
     const userEmail =
         post?.user_email || post?.email || "Sierra Leone";
     const caption = post?.caption || post?.description || "";
@@ -145,48 +138,51 @@ function createPost(post = {}) {
 
     return `
         <article class="post" data-post-id="${escapeHtml(postId)}">
-            <div class="post-header">
-                <div class="business-avatar">👤</div>
-                <div class="business-info">
-                    <div class="business-name">${escapeHtml(userName)}</div>
-                    <div class="business-location">${escapeHtml(userEmail)}</div>
-                </div>
-                <button class="header-action" type="button"
-                    aria-label="Post options">⋯</button>
-            </div>
-
             ${image ? `
                 <img class="post-image"
                     src="${escapeHtml(image)}"
-                    alt="${escapeHtml(caption || "SaloneBiz post")}"
+                    alt="${escapeHtml(caption || "Kivo post")}"
                     loading="lazy"
                     onerror="this.style.display='none';">
-            ` : ""}
+            ` : `<div class="post-image post-image-fallback"></div>`}
+
+            <div class="post-fade"></div>
+
+            <button class="header-action post-options" type="button"
+                aria-label="Post options">⋯</button>
 
             <div class="post-content">
+                <div class="post-header">
+                    <div class="business-avatar">👤</div>
+                    <div class="business-info">
+                        <div class="business-name">${escapeHtml(userName)}</div>
+                        <div class="business-location">${escapeHtml(userEmail)}</div>
+                    </div>
+                </div>
+
                 ${caption ? `
                     <div class="post-description">
                         ${escapeHtml(caption)}
                     </div>
                 ` : ""}
+            </div>
 
-                <div class="post-actions">
-                    <button class="post-action like-button"
-                        type="button" data-liked="false">
-                        ❤️ <span class="like-count">
-                            ${Number.isFinite(likes) ? likes : 0}
-                        </span>
-                    </button>
+            <div class="post-actions">
+                <button class="post-action favorite-button"
+                    type="button" data-favorited="false">⭐</button>
 
-                    <button class="post-action comment-button" type="button">
-                        💬 <span>${Number.isFinite(comments) ? comments : 0}</span>
-                    </button>
+                <button class="post-action like-button"
+                    type="button" data-liked="false">
+                    ❤️<span class="like-count">
+                        ${Number.isFinite(likes) ? likes : 0}
+                    </span>
+                </button>
 
-                    <button class="post-action share-button" type="button">↗️</button>
+                <button class="post-action comment-button" type="button">
+                    💬<span>${Number.isFinite(comments) ? comments : 0}</span>
+                </button>
 
-                    <button class="post-action favorite-button"
-                        type="button" data-favorited="false">⭐</button>
-                </div>
+                <button class="post-action share-button" type="button">↗️</button>
             </div>
         </article>
     `;
@@ -322,11 +318,11 @@ function attachPostEvents(feed) {
             const article = button.closest(".post");
             const business =
                 article?.querySelector(".business-name")?.textContent?.trim()
-                || "SaloneBiz";
+                || "Kivo";
 
             const shareData = {
                 title: business,
-                text: `Check out ${business} on SaloneBiz`,
+                text: `Check out ${business} on Kivo`,
                 url: window.location.href
             };
 
@@ -335,7 +331,7 @@ function attachPostEvents(feed) {
                     await navigator.share(shareData);
                 } else if (navigator.clipboard) {
                     await navigator.clipboard.writeText(window.location.href);
-                    alert("SaloneBiz link copied!");
+                    alert("Kivo link copied!");
                 } else {
                     alert("Sharing is not supported on this device.");
                 }
@@ -352,6 +348,36 @@ function attachPostEvents(feed) {
             alert("Comments page will be connected next.");
         });
     });
+}
+
+// =====================================================
+// SNAP-SCROLL FOCUS EFFECT
+// Highlights whichever post is currently settled in
+// view, similar to TikTok/Instagram feeds.
+// =====================================================
+
+function setupSnapScrollEffect(feed) {
+    const posts = feed.querySelectorAll(".post");
+    if (!posts.length) return;
+
+    if (!("IntersectionObserver" in window)) {
+        posts.forEach(post => post.classList.add("in-view"));
+        return;
+    }
+
+    const observer = new IntersectionObserver(
+        entries => {
+            entries.forEach(entry => {
+                entry.target.classList.toggle(
+                    "in-view",
+                    entry.isIntersecting && entry.intersectionRatio > 0.55
+                );
+            });
+        },
+        { threshold: [0, 0.55, 1] }
+    );
+
+    posts.forEach(post => observer.observe(post));
 }
 
 function escapeHtml(value) {
