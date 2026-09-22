@@ -73,67 +73,123 @@
 }
 
 /* =====================================
-   POST
+   TIKTOK-STYLE FEED (Home)
 ===================================== */
 
-.post {
-    background: rgba(16,21,34,0.82);
-
-    border: 1px solid var(--border);
-
-    border-radius: 22px;
-
+.tiktok-page {
+    height: 100dvh;
     overflow: hidden;
-
-    margin-bottom: 22px;
-
-    box-shadow:
-        0 15px 45px rgba(0,0,0,0.18);
+    padding-bottom: 0;
 }
 
-.post-header {
-    padding: 15px;
+.tiktok-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+
+    z-index: 60;
 
     display: flex;
     align-items: center;
-    gap: 12px;
-}
+    justify-content: center;
 
-.business-avatar {
-    width: 45px;
-    height: 45px;
-
-    border-radius: 50%;
+    padding:
+        calc(14px + env(safe-area-inset-top, 0px))
+        16px 24px;
 
     background: linear-gradient(
-        135deg,
-        var(--primary),
-        #22d3ee
+        to bottom,
+        rgba(3,4,10,0.55),
+        transparent
     );
 
-    display: grid;
-    place-items: center;
+    pointer-events: none;
+}
 
+.tiktok-topbar > * {
+    pointer-events: auto;
+}
+
+.tiktok-tab {
+    color: rgba(255,255,255,0.55);
     font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.2px;
 }
 
-.business-info {
-    flex: 1;
+.tiktok-tab.active {
+    color: #fff;
+    position: relative;
+    padding-bottom: 8px;
 }
 
-.business-name {
-    font-weight: 700;
+.tiktok-tab.active::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 26px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--brand-gradient);
 }
 
-.business-location {
-    color: var(--muted);
-    font-size: 13px;
+.tiktok-search {
+    position: absolute;
+    right: 14px;
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    background: rgba(10,12,20,0.45);
+}
+
+#feed {
+    height: 100dvh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+}
+
+#feed::-webkit-scrollbar {
+    display: none;
+}
+
+/* =====================================
+   POST (full-screen TikTok slide)
+===================================== */
+
+.post {
+    position: relative;
+
+    height: 100dvh;
+    width: 100%;
+
+    overflow: hidden;
+
+    background: #000;
+
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+
+    opacity: 0.9;
+    transform: scale(0.99);
+
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+
+.post.in-view {
+    opacity: 1;
+    transform: scale(1);
 }
 
 .post-image {
-    width: 100%;
+    position: absolute;
+    inset: 0;
 
-    aspect-ratio: 1 / 1;
+    width: 100%;
+    height: 100%;
 
     object-fit: cover;
 
@@ -142,55 +198,163 @@
     background: #05060b;
 }
 
+.post-image-fallback {
+    background: var(--brand-gradient);
+    opacity: 0.35;
+}
+
+.post-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 58%;
+
+    background: linear-gradient(
+        to top,
+        rgba(4,5,10,0.92) 0%,
+        rgba(4,5,10,0.5) 45%,
+        transparent 100%
+    );
+
+    pointer-events: none;
+}
+
+.post-options {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+
+    z-index: 3;
+
+    width: 36px;
+    height: 36px;
+
+    background: rgba(10,12,20,0.4);
+}
+
 .post-content {
-    padding: 15px;
+    position: absolute;
+    left: 0;
+    right: 84px;
+    bottom: calc(76px + 22px);
+
+    z-index: 2;
+
+    padding: 0 16px;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    margin-bottom: 10px;
+}
+
+.business-avatar {
+    width: 40px;
+    height: 40px;
+
+    border: 2px solid rgba(255,255,255,0.85);
+
+    border-radius: 50%;
+
+    background: var(--brand-gradient);
+
+    display: grid;
+    place-items: center;
+
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.business-info {
+    flex: 1;
+}
+
+.business-name {
+    font-weight: 800;
+    font-size: 15px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.65);
+}
+
+.business-location {
+    color: rgba(255,255,255,0.78);
+    font-size: 12px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.65);
 }
 
 .post-description {
-    color: #d9dce5;
+    color: #f2f3f7;
 
-    line-height: 1.5;
+    line-height: 1.45;
+    font-size: 14px;
 
-    margin-top: 8px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.65);
+
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .post-actions {
+    position: absolute;
+    right: 12px;
+    bottom: calc(76px + 22px);
+
+    z-index: 3;
+
     display: flex;
-
+    flex-direction: column;
     align-items: center;
-
-    gap: 8px;
-
-    margin-top: 14px;
+    gap: 18px;
 }
 
 .post-action {
-    min-width: 42px;
-    height: 42px;
+    width: 50px;
+    height: 50px;
+    min-width: 0;
+    padding: 0;
 
-    padding: 0 12px;
+    border-radius: 50%;
 
-    border-radius: 14px;
+    background: rgba(15,17,28,0.4);
+    backdrop-filter: blur(6px);
 
-    background: var(--card-light);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+
+    font-size: 21px;
 
     color: white;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 
     transition: 0.2s;
 }
 
+.post-action span {
+    font-size: 11px;
+    font-weight: 700;
+}
+
 .post-action:hover {
     transform: translateY(-2px);
-
-    background: rgba(118,87,255,0.2);
 }
 
 .post-action.liked {
-    color: var(--danger);
+    color: var(--kivo-pink);
+    background: rgba(255,45,149,0.2);
 }
 
 .post-action.favorited {
     color: #ffc83d;
+    background: rgba(255,200,61,0.2);
 }
 
 /* =====================================
@@ -406,12 +570,7 @@
 
     border-radius: 14px;
 
-    background:
-        linear-gradient(
-            135deg,
-            var(--primary),
-            var(--primary-light)
-        );
+    background: var(--brand-gradient);
 
     color: white;
 
